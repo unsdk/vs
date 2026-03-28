@@ -103,6 +103,8 @@ fn run_with_app(app: App, command: Commands) -> Result<i32> {
                 let note_suffix = version
                     .note
                     .as_deref()
+                    .map(str::trim)
+                    .filter(|note| !note.is_empty())
                     .map(|note| format!(" ({note})"))
                     .unwrap_or_default();
                 let additions_suffix = if version.additions.is_empty() {
