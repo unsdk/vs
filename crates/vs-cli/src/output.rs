@@ -160,7 +160,13 @@ pub fn version_label(version: &AvailableVersion) -> String {
         let additions = version
             .additions
             .iter()
-            .map(|addition| format!("{} {}", addition.name, addition.version))
+            .map(|addition| {
+                if addition.version.trim().is_empty() {
+                    addition.name.clone()
+                } else {
+                    format!("{} {}", addition.name, addition.version)
+                }
+            })
             .collect::<Vec<_>>()
             .join(", ");
         format!(" [{additions}]")

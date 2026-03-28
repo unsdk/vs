@@ -48,7 +48,8 @@ pub struct AvailableHookResultItem {
 #[serde(rename_all = "camelCase")]
 pub struct AvailableAdditionItem {
     pub name: String,
-    pub version: String,
+    #[serde(default)]
+    pub version: Option<String>,
     #[serde(default)]
     pub note: Option<String>,
 }
@@ -63,7 +64,7 @@ impl From<AvailableHookResultItem> for AvailableVersion {
                 .into_iter()
                 .map(|addition| AvailableAddition {
                     name: addition.name,
-                    version: addition.version,
+                    version: addition.version.unwrap_or_default(),
                     note: addition.note,
                 })
                 .collect(),
