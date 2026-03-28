@@ -15,6 +15,23 @@ This repository provides the initial multi-crate implementation with:
 
 The design favors small modules, explicit crate boundaries, and testable services.
 
+## Feature flags
+
+`vs-cli` supports backend feature gating:
+
+- `lua`
+- `wasi`
+
+Examples:
+
+```bash
+cargo build -p vs-cli --no-default-features --features lua
+cargo build -p vs-cli --no-default-features --features wasi
+cargo build -p vs-cli --no-default-features --features "lua,wasi"
+```
+
+When the `lua` feature is enabled and `registry.source` is unset, `vs` defaults to the official vfox plugin registry index at `https://version-fox.github.io/vfox-plugins/index.json`.
+
 ## Workspace crates
 
 - `vs-cli`: CLI entrypoint and command parsing

@@ -14,6 +14,11 @@
 
 The crate publishes a single binary named `vs`.
 
+## Features
+
+- `lua`: enables Lua-backed plugins and the default vfox registry integration
+- `wasi`: enables native WASI-style plugins
+
 ## Testing
 
 Integration tests in `tests/cli.rs` cover:

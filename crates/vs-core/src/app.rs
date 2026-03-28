@@ -11,7 +11,9 @@ use vs_config::{
 };
 use vs_installer::Installer;
 use vs_plugin_api::{EnvKey, Plugin, PluginBackendKind};
+#[cfg(feature = "lua")]
 use vs_plugin_lua::LuaBackend;
+#[cfg(feature = "wasi")]
 use vs_plugin_wasi::WasiBackend;
 use vs_registry::{RegistryEntry, RegistryService};
 use vs_shell::{
@@ -21,6 +23,8 @@ use vs_shell::{
 
 use crate::error::CoreError;
 use crate::models::CurrentTool;
+#[cfg(feature = "lua")]
+use crate::registry_source::DEFAULT_VFOX_REGISTRY_SOURCE;
 
 /// Top-level application orchestrator.
 #[derive(Debug, Clone)]
@@ -30,7 +34,9 @@ pub struct App {
     pub(crate) session_id: Option<String>,
     pub(crate) registry: RegistryService,
     pub(crate) installer: Installer,
+    #[cfg(feature = "lua")]
     pub(crate) lua_backend: LuaBackend,
+    #[cfg(feature = "wasi")]
     pub(crate) wasi_backend: WasiBackend,
 }
 
@@ -57,7 +63,9 @@ impl App {
             session_id,
             registry,
             installer,
+            #[cfg(feature = "lua")]
             lua_backend: LuaBackend,
+            #[cfg(feature = "wasi")]
             wasi_backend: WasiBackend,
         };
         app.ensure_home_layout()?;
@@ -73,7 +81,13 @@ impl App {
     }
 
     pub(crate) fn app_config(&self) -> Result<AppConfig, CoreError> {
-        read_app_config(self.home()).map_err(Into::into)
+        let mut config = read_app_config(self.home())?;
+        if config.registry.source.is_none() {
+            if let Some(default_source) = self.default_registry_source() {
+                config.registry.source = Some(default_source.to_string());
+            }
+        }
+        Ok(config)
     }
 
     pub(crate) fn ensure_home_layout(&self) -> Result<(), CoreError> {
@@ -81,7 +95,9 @@ impl App {
         fs::create_dir_all(&layout.home)?;
         fs::create_dir_all(&layout.registry_dir)?;
         fs::create_dir_all(&layout.plugins_dir)?;
+        fs::create_dir_all(layout.plugins_dir.join("sources"))?;
         fs::create_dir_all(&layout.cache_dir)?;
+        fs::create_dir_all(layout.home.join("downloads"))?;
         fs::create_dir_all(&layout.shims_dir)?;
         fs::create_dir_all(&layout.sessions_dir)?;
         fs::create_dir_all(&layout.global_dir)?;
@@ -104,12 +120,102 @@ impl App {
     }
 
     pub(crate) fn load_plugin(&self, entry: &RegistryEntry) -> Result<Box<dyn Plugin>, CoreError> {
+        let entry = self.materialize_plugin_entry(entry)?;
         let source = self.normalize_source_path(&entry.source);
-        let plugin = match entry.backend {
-            PluginBackendKind::Lua => self.lua_backend.load(&source)?,
-            PluginBackendKind::Wasi => self.wasi_backend.load(&source)?,
-        };
-        Ok(plugin)
+        match entry.backend {
+            PluginBackendKind::Lua => {
+                #[cfg(feature = "lua")]
+                {
+                    self.lua_backend.load(&source).map_err(Into::into)
+                }
+                #[cfg(not(feature = "lua"))]
+                {
+                    Err(CoreError::UnsupportedBackend {
+                        backend: "lua",
+                        feature: "lua",
+                    })
+                }
+            }
+            PluginBackendKind::Wasi => {
+                #[cfg(feature = "wasi")]
+                {
+                    self.wasi_backend.load(&source).map_err(Into::into)
+                }
+                #[cfg(not(feature = "wasi"))]
+                {
+                    Err(CoreError::UnsupportedBackend {
+                        backend: "wasi",
+                        feature: "wasi",
+                    })
+                }
+            }
+        }
+    }
+
+    pub(crate) fn ensure_backend_supported(
+        &self,
+        backend: PluginBackendKind,
+    ) -> Result<(), CoreError> {
+        match backend {
+            PluginBackendKind::Lua => {
+                #[cfg(feature = "lua")]
+                {
+                    Ok(())
+                }
+                #[cfg(not(feature = "lua"))]
+                {
+                    Err(CoreError::UnsupportedBackend {
+                        backend: "lua",
+                        feature: "lua",
+                    })
+                }
+            }
+            PluginBackendKind::Wasi => {
+                #[cfg(feature = "wasi")]
+                {
+                    Ok(())
+                }
+                #[cfg(not(feature = "wasi"))]
+                {
+                    Err(CoreError::UnsupportedBackend {
+                        backend: "wasi",
+                        feature: "wasi",
+                    })
+                }
+            }
+        }
+    }
+
+    pub(crate) fn default_backend(&self) -> Result<PluginBackendKind, CoreError> {
+        #[cfg(all(feature = "lua", feature = "wasi"))]
+        {
+            Ok(PluginBackendKind::Lua)
+        }
+        #[cfg(all(feature = "lua", not(feature = "wasi")))]
+        {
+            Ok(PluginBackendKind::Lua)
+        }
+        #[cfg(all(feature = "wasi", not(feature = "lua")))]
+        {
+            Ok(PluginBackendKind::Wasi)
+        }
+        #[cfg(not(any(feature = "lua", feature = "wasi")))]
+        {
+            Err(CoreError::Unsupported(String::from(
+                "no plugin backend is enabled in this build",
+            )))
+        }
+    }
+
+    pub(crate) fn default_registry_source(&self) -> Option<&'static str> {
+        #[cfg(feature = "lua")]
+        {
+            Some(DEFAULT_VFOX_REGISTRY_SOURCE)
+        }
+        #[cfg(not(feature = "lua"))]
+        {
+            None
+        }
     }
 
     pub(crate) fn write_tool_assignment(

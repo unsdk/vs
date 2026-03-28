@@ -10,6 +10,14 @@ cargo build -p vs-cli
 
 The binary is produced as `target/debug/vs` during development.
 
+Backend-specific builds are also supported:
+
+```bash
+cargo build -p vs-cli --no-default-features --features lua
+cargo build -p vs-cli --no-default-features --features wasi
+cargo build -p vs-cli --no-default-features --features "lua,wasi"
+```
+
 ## 2. Choose a home directory
 
 `vs` uses `~/.vs` by default.
@@ -30,6 +38,10 @@ vs update
 ```
 
 In the current build, `registry.source` is expected to be a local JSON file.
+
+When `vs` is built with the `lua` feature and `registry.source` is unset, `vs update` defaults to the official vfox plugin registry index:
+
+`https://version-fox.github.io/vfox-plugins/index.json`
 
 ## 4. Add a plugin
 

@@ -24,6 +24,15 @@ The intended dependency direction is:
 2. `vs-core` composes those leaves
 3. `vs-cli` depends on `vs-core`
 
+## Backend feature flags
+
+The CLI and core crates expose matching backend features:
+
+- `lua`
+- `wasi`
+
+Only backends compiled into the current build are accepted at runtime. Unsupported plugin types return an explicit error instead of failing later during plugin loading.
+
 ## File-size discipline
 
 The workspace favors many small modules over a few oversized files:

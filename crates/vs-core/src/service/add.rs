@@ -1,8 +1,7 @@
-use std::path::PathBuf;
-
 use vs_plugin_api::PluginBackendKind;
 use vs_registry::RegistryEntry;
 
+use crate::plugin_source::is_remote_source;
 use crate::{App, CoreError};
 
 impl App {
@@ -14,24 +13,23 @@ impl App {
         backend: Option<PluginBackendKind>,
     ) -> Result<RegistryEntry, CoreError> {
         let entry = if let Some(source) = source {
+            let backend = backend.unwrap_or(self.default_backend()?);
+            self.ensure_backend_supported(backend)?;
             RegistryEntry {
                 name: name.to_string(),
-                source: self.normalize_source_path(&source).display().to_string(),
-                backend: backend.unwrap_or(PluginBackendKind::Lua),
+                source: if is_remote_source(&source) {
+                    source
+                } else {
+                    self.normalize_source_path(&source).display().to_string()
+                },
+                backend,
                 description: None,
                 aliases: Vec::new(),
             }
         } else {
-            let entry = self.resolve_registry_entry(name)?;
-            RegistryEntry {
-                source: PathBuf::from(&entry.source)
-                    .canonicalize()
-                    .unwrap_or_else(|_| self.normalize_source_path(&entry.source))
-                    .display()
-                    .to_string(),
-                ..entry
-            }
+            self.resolve_registry_entry(name)?
         };
+        let entry = self.materialize_plugin_entry(&entry)?;
 
         self.registry.add_plugin(entry.clone())?;
         Ok(entry)

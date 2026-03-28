@@ -5,6 +5,11 @@ edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 
+[features]
+default = ["lua", "wasi"]
+lua = ["vs-core/lua"]
+wasi = ["vs-core/wasi"]
+
 [[bin]]
 name = "vs"
 path = "src/main.rs"

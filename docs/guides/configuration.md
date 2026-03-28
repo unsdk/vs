@@ -22,6 +22,10 @@ Current keys:
 - `legacyVersionFile`
 - `registry.source`
 
+If `vs` is built with the `lua` feature and `registry.source` is not set, the effective default is:
+
+`https://version-fox.github.io/vfox-plugins/index.json`
+
 Example:
 
 ```yaml

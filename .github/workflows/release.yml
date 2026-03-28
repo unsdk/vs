@@ -1,48 +1,103 @@
-name: CI
+name: Release
 
 on:
-  push:
-  pull_request:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version without the leading v
+        required: true
+        type: string
+
+permissions:
+  contents: write
 
 jobs:
-  checks:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+  prepare-release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release_meta.outputs.version }}
+      tag: ${{ steps.release_meta.outputs.tag }}
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy, rustfmt
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.x"
 
-      - name: Format
-        run: cargo fmt --all --check
+      - name: Normalize version
+        id: release_meta
+        shell: bash
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          set -euo pipefail
+          VERSION="${INPUT_VERSION#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Lint
-        run: cargo clippy --all-targets --all-features --locked -- -D warnings
+      - name: Update workspace version
+        shell: bash
+        env:
+          VERSION: ${{ steps.release_meta.outputs.version }}
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          from pathlib import Path
 
-      - name: Test
-        run: cargo test --workspace
+          version = os.environ["VERSION"]
+          cargo_toml_path = Path("Cargo.toml")
+          cargo_toml = cargo_toml_path.read_text(encoding="utf-8")
+          pattern = r'(\[workspace\.package\][\s\S]*?^version\s*=\s*")([^"]+)(")'
+          updated, replacements = re.subn(pattern, rf'\g<1>{version}\3', cargo_toml, count=1, flags=re.MULTILINE)
+          if replacements != 1:
+              raise SystemExit("failed to update workspace version")
+          cargo_toml_path.write_text(updated, encoding="utf-8")
+          PY
 
-      - name: Doc tests
-        run: cargo test --doc --workspace
+      - name: Refresh lockfile
+        run: cargo check -p vs-cli --all-features
 
-  build-artifacts:
-    name: Build ${{ matrix.feature.label }} on ${{ matrix.platform.label }}
-    needs: checks
+      - name: Commit release version
+        shell: bash
+        env:
+          VERSION: ${{ steps.release_meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Cargo.toml Cargo.lock
+          if ! git diff --cached --quiet; then
+            git commit -m "release: v$VERSION"
+          fi
+
+      - name: Push commit and tag
+        shell: bash
+        env:
+          TAG: ${{ steps.release_meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git tag "$TAG"
+          git push origin HEAD:${GITHUB_REF_NAME}
+          git push origin "$TAG"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_meta.outputs.tag }}
+          name: ${{ steps.release_meta.outputs.tag }}
+          generate_release_notes: true
+
+  build-release-artifacts:
+    name: Release ${{ matrix.feature.label }} on ${{ matrix.platform.label }}
+    needs: prepare-release
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       fail-fast: false
@@ -78,17 +133,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare-release.outputs.tag }}
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
 
       - name: Install musl toolchain
         if: ${{ matrix.platform.musl }}
@@ -105,23 +157,6 @@ jobs:
         if: ${{ matrix.platform.target != '' }}
         run: rustup target add ${{ matrix.platform.target }}
 
-      - name: Read workspace version
-        id: version
-        shell: bash
-        run: |
-          python - <<'PY'
-          import os
-          import re
-          from pathlib import Path
-
-          cargo_toml = Path("Cargo.toml").read_text()
-          match = re.search(r'\[workspace\.package\][\s\S]*?^version\s*=\s*"([^"]+)"', cargo_toml, re.MULTILINE)
-          if not match:
-              raise SystemExit("failed to read workspace version")
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
-              handle.write(f"version={match.group(1)}\n")
-          PY
-
       - name: Build release binary
         shell: bash
         env:
@@ -135,12 +170,12 @@ jobs:
             cargo build -p vs-cli --release --locked --no-default-features --features "$FEATURE_FLAGS"
           fi
 
-      - name: Package Unix artifact
+      - name: Package Unix release asset
         if: ${{ runner.os != 'Windows' }}
         shell: bash
         env:
           BUILD_TARGET: ${{ matrix.platform.target }}
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.prepare-release.outputs.version }}
           PLATFORM_LABEL: ${{ matrix.platform.label }}
           FEATURE_LABEL: ${{ matrix.feature.label }}
         run: |
@@ -156,12 +191,12 @@ jobs:
           tar -C "$staging_dir" -czf "$archive_name" vs
           echo "ARCHIVE_PATH=$archive_name" >> "$GITHUB_ENV"
 
-      - name: Package Windows artifact
+      - name: Package Windows release asset
         if: ${{ runner.os == 'Windows' }}
         shell: pwsh
         env:
           BUILD_TARGET: ${{ matrix.platform.target }}
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.prepare-release.outputs.version }}
           PLATFORM_LABEL: ${{ matrix.platform.label }}
           FEATURE_LABEL: ${{ matrix.feature.label }}
         run: |
@@ -171,16 +206,22 @@ jobs:
             $binaryPath = "target\release\vs.exe"
           }
           $archiveName = "vs-v$env:VERSION-$env:PLATFORM_LABEL-$env:FEATURE_LABEL.zip"
-          $stagingDir = Join-Path $env:RUNNER_TEMP "vs-package-$env:PLATFORM_LABEL-$env:FEATURE_LABEL"
+          $stagingDir = Join-Path $env:RUNNER_TEMP "vs-release-$env:PLATFORM_LABEL-$env:FEATURE_LABEL"
           New-Item -ItemType Directory -Force -Path $stagingDir | Out-Null
           Copy-Item $binaryPath (Join-Path $stagingDir "vs.exe")
           Compress-Archive -Path (Join-Path $stagingDir "*") -DestinationPath $archiveName -Force
           Add-Content -Path $env:GITHUB_ENV -Value "ARCHIVE_PATH=$archiveName"
 
-      - name: Upload artifact
+      - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: vs-v${{ steps.version.outputs.version }}-${{ matrix.platform.label }}-${{ matrix.feature.label }}
+          name: vs-v${{ needs.prepare-release.outputs.version }}-${{ matrix.platform.label }}-${{ matrix.feature.label }}
           path: ${{ env.ARCHIVE_PATH }}
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare-release.outputs.tag }}
+          files: ${{ env.ARCHIVE_PATH }}

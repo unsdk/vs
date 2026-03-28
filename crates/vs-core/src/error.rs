@@ -8,6 +8,12 @@ pub enum CoreError {
     /// A filesystem operation failed.
     #[error(transparent)]
     Io(#[from] std::io::Error),
+    /// An HTTP request failed.
+    #[error(transparent)]
+    Http(#[from] reqwest::Error),
+    /// An archive could not be extracted.
+    #[error(transparent)]
+    Archive(#[from] zip::result::ZipError),
     /// Configuration error.
     #[error(transparent)]
     Config(#[from] vs_config::ConfigError),
@@ -44,4 +50,12 @@ pub enum CoreError {
     /// A migration source could not be found.
     #[error("no migration source home is available")]
     MissingMigrationSource,
+    /// The selected backend is not compiled into this build.
+    #[error(
+        "plugin backend {backend} is not enabled in this build; rebuild with the `{feature}` feature"
+    )]
+    UnsupportedBackend {
+        backend: &'static str,
+        feature: &'static str,
+    },
 }

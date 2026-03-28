@@ -28,6 +28,7 @@ fn output_text(output: &std::process::Output) -> String {
     combined
 }
 
+#[cfg(feature = "lua")]
 #[test]
 fn cli_should_run_registry_install_use_and_exec_flow() -> Result<(), Box<dyn std::error::Error>> {
     let temp_dir = temp_workspace();
@@ -58,6 +59,7 @@ fn cli_should_run_registry_install_use_and_exec_flow() -> Result<(), Box<dyn std
     Ok(())
 }
 
+#[cfg(feature = "lua")]
 #[test]
 fn cli_should_prefer_project_scope_and_support_unlink() -> Result<(), Box<dyn std::error::Error>> {
     let temp_dir = temp_workspace();

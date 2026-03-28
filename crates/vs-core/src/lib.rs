@@ -3,6 +3,8 @@
 mod app;
 mod error;
 mod models;
+mod plugin_source;
+mod registry_source;
 mod service;
 
 pub use app::App;
@@ -11,15 +13,22 @@ pub use models::{CurrentTool, InstalledVersion, MigrateSummary, PluginInfo, UseS
 
 #[cfg(test)]
 mod tests {
+    #[cfg(feature = "lua")]
     use std::error::Error;
+    #[cfg(feature = "lua")]
     use std::fs;
 
+    #[cfg(feature = "lua")]
     use tempfile::TempDir;
+    #[cfg(feature = "lua")]
     use vs_config::HomeLayout;
+    #[cfg(feature = "lua")]
     use vs_plugin_api::PluginBackendKind;
 
+    #[cfg(feature = "lua")]
     use crate::{App, UseScope};
 
+    #[cfg(feature = "lua")]
     #[test]
     fn use_tool_should_write_project_config() -> Result<(), Box<dyn Error>> {
         let temp_dir = TempDir::new()?;
@@ -50,6 +59,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(feature = "lua")]
     fn write_lua_fixture(root: &std::path::Path) {
         if let Err(error) = fs::create_dir_all(root.join("hooks")) {
             panic!("failed to create hooks directory: {error}");
