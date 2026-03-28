@@ -30,6 +30,18 @@ cargo build -p vs-cli --no-default-features --features wasi
 cargo build -p vs-cli --no-default-features --features "lua,wasi"
 ```
 
+For the smallest binaries, use the dedicated size-first profile:
+
+```bash
+cargo build -p vs-cli --profile min-size --no-default-features
+cargo build -p vs-cli --profile min-size --no-default-features --features wasi
+cargo build -p vs-cli --profile min-size --no-default-features --features lua
+```
+
+The standard `release` profile now strips symbols and enables LTO. The `min-size`
+profile additionally switches to `opt-level = "z"` and `panic = "abort"` for
+size-focused distribution builds.
+
 When the `lua` feature is enabled and `registry.address` is unset, `vs` defaults to the official vfox plugin registry at `https://version-fox.github.io/vfox-plugins`.
 
 ## Workspace crates

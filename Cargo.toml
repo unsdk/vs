@@ -10,13 +10,12 @@ rust-version = "1.85"
 
 [workspace.dependencies]
 anyhow = "1.0.100"
-clap = { version = "4.5.39", features = ["derive", "string", "wrap_help"] }
+clap = { version = "4.5.39", default-features = false, features = ["derive", "help", "std", "usage"] }
 clap_complete = "4.5.52"
-dialoguer = { version = "0.12.0", features = ["fuzzy-select"] }
+dialoguer = { version = "0.12.0", default-features = false, features = ["fuzzy-select"] }
 dirs = "6.0.0"
 flate2 = "1.1.5"
 indicatif = "0.18.0"
-miette = { version = "7.6.0", features = ["fancy"] }
 mlua = { version = "0.10.5", features = ["lua54", "serialize", "vendored"] }
 md-5 = "0.10.6"
 reqwest = { version = "0.12.24", default-features = false, features = ["blocking", "json", "rustls-tls"] }
@@ -34,6 +33,17 @@ toml = "0.8.20"
 walkdir = "2.5.0"
 xz2 = "0.1.7"
 zip = { version = "2.4.2", default-features = false, features = ["deflate"] }
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+strip = "symbols"
+
+[profile.min-size]
+inherits = "release"
+lto = "fat"
+opt-level = "z"
+panic = "abort"
 
 [workspace.lints.rust]
 future-incompatible = "warn"

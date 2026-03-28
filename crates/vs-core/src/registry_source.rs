@@ -6,6 +6,7 @@ use vs_registry::RegistryEntry;
 use crate::CoreError;
 
 /// Official vfox Lua plugin registry index.
+#[cfg(any(feature = "lua", test))]
 pub const DEFAULT_VFOX_REGISTRY_SOURCE: &str = "https://version-fox.github.io/vfox-plugins";
 
 #[derive(Debug, Deserialize)]

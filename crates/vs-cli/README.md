@@ -19,6 +19,15 @@ The crate publishes a single binary named `vs`.
 - `lua`: enables Lua-backed plugins and the default vfox registry integration
 - `wasi`: enables native WASI-style plugins
 
+For the smallest distributable binaries, build with the workspace `min-size`
+profile and only the backend features you need:
+
+```bash
+cargo build -p vs-cli --profile min-size --no-default-features
+cargo build -p vs-cli --profile min-size --no-default-features --features wasi
+cargo build -p vs-cli --profile min-size --no-default-features --features lua
+```
+
 ## Testing
 
 Integration tests in `tests/cli.rs` cover:

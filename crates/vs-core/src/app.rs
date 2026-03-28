@@ -139,6 +139,7 @@ impl App {
 
     pub(crate) fn load_plugin(&self, entry: &RegistryEntry) -> Result<Box<dyn Plugin>, CoreError> {
         let entry = self.materialize_plugin_entry(entry)?;
+        #[cfg(any(feature = "lua", feature = "wasi"))]
         let source = self.normalize_source_path(&entry.source);
         match entry.backend {
             PluginBackendKind::Lua => {

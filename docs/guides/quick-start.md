@@ -18,6 +18,14 @@ cargo build -p vs-cli --no-default-features --features wasi
 cargo build -p vs-cli --no-default-features --features "lua,wasi"
 ```
 
+For distribution builds where binary size matters more than build time, prefer:
+
+```bash
+cargo build -p vs-cli --profile min-size --no-default-features
+cargo build -p vs-cli --profile min-size --no-default-features --features wasi
+cargo build -p vs-cli --profile min-size --no-default-features --features lua
+```
+
 ## 2. Choose a home directory
 
 `vs` uses `~/.vs` by default. Its internal layout is kept close to `vfox`, but the default home path remains `vs`-native.

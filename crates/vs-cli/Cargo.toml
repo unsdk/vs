@@ -19,9 +19,8 @@ anyhow.workspace = true
 clap.workspace = true
 clap_complete.workspace = true
 dialoguer.workspace = true
-miette.workspace = true
 vs-config = { path = "../vs-config" }
-vs-core = { path = "../vs-core" }
+vs-core = { path = "../vs-core", default-features = false }
 vs-plugin-api = { path = "../vs-plugin-api" }
 vs-registry = { path = "../vs-registry" }
 
