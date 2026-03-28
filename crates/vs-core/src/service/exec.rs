@@ -63,12 +63,11 @@ fn resolve_command_path(command: &str, preferred_paths: &[PathBuf]) -> Option<Pa
             });
 
         for directory in search_paths {
-            let direct_match = directory.join(command);
-            if direct_match.is_file() {
-                return Some(direct_match);
-            }
-
             if command_path.extension().is_some() {
+                let direct_match = directory.join(command);
+                if direct_match.is_file() {
+                    return Some(direct_match);
+                }
                 continue;
             }
 
@@ -112,16 +111,24 @@ mod tests {
         fs::create_dir_all(&fallback)?;
 
         #[cfg(windows)]
+        let preferred_script = preferred.join("node");
+        #[cfg(windows)]
         let preferred_binary = preferred.join("node.cmd");
         #[cfg(not(windows))]
         let preferred_binary = preferred.join("node");
 
         #[cfg(windows)]
+        let fallback_script = fallback.join("node");
+        #[cfg(windows)]
         let fallback_binary = fallback.join("node.cmd");
         #[cfg(not(windows))]
         let fallback_binary = fallback.join("node");
 
+        #[cfg(windows)]
+        fs::write(&preferred_script, "fixture preferred script")?;
         fs::write(&preferred_binary, "fixture preferred")?;
+        #[cfg(windows)]
+        fs::write(&fallback_script, "fixture fallback script")?;
         fs::write(&fallback_binary, "fixture fallback")?;
 
         let resolved = resolve_command_path("node", &[preferred, fallback])
