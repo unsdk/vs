@@ -1,6 +1,41 @@
-[package]
-name = "vs"
+[workspace]
+members = ["crates/*"]
+resolver = "2"
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
+license = "MIT"
+rust-version = "1.85"
 
-[dependencies]
+[workspace.dependencies]
+anyhow = "1.0.100"
+clap = { version = "4.5.39", features = ["derive", "string", "wrap_help"] }
+clap_complete = "4.5.52"
+dirs = "6.0.0"
+miette = { version = "7.6.0", features = ["fancy"] }
+mlua = { version = "0.10.5", features = ["lua54", "serialize", "vendored"] }
+regex = "1.11.1"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+serde_yaml = "0.9.34"
+tempfile = "3.19.1"
+thiserror = "2.0.12"
+toml = "0.8.20"
+walkdir = "2.5.0"
+
+[workspace.lints.rust]
+future-incompatible = "warn"
+nonstandard-style = "deny"
+rust-2018-idioms = "deny"
+rust-2021-prelude-collisions = "deny"
+unused-lifetimes = "deny"
+unused-macro-rules = "warn"
+unused-qualifications = "warn"
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = 10 }
+redundant_clone = { level = "deny", priority = 9 }
+needless_collect = { level = "deny", priority = 9 }
+unwrap_used = { level = "deny", priority = 9 }
+expect_used = { level = "deny", priority = 9 }

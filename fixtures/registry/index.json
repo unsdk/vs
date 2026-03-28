@@ -1,0 +1,16 @@
+[
+  {
+    "name": "nodejs",
+    "source": "../plugins/nodejs-lua",
+    "backend": "lua",
+    "description": "Fixture Node.js plugin",
+    "aliases": ["node"]
+  },
+  {
+    "name": "deno",
+    "source": "../plugins/deno-wasi",
+    "backend": "wasi",
+    "description": "Fixture native plugin",
+    "aliases": ["denojs"]
+  }
+]

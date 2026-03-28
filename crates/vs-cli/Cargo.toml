@@ -1,0 +1,26 @@
+[package]
+name = "vs-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "vs"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+clap_complete.workspace = true
+miette.workspace = true
+vs-config = { path = "../vs-config" }
+vs-core = { path = "../vs-core" }
+vs-plugin-api = { path = "../vs-plugin-api" }
+
+[dev-dependencies]
+tempfile.workspace = true
+vs-test-support = { path = "../vs-test-support" }
+
+[lints]
+workspace = true

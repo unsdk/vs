@@ -1,0 +1,13 @@
+[package]
+name = "vs-plugin-sdk"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde.workspace = true
+vs-plugin-api = { path = "../vs-plugin-api" }
+
+[lints]
+workspace = true

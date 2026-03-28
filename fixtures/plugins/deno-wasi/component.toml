@@ -1,0 +1,18 @@
+[plugin]
+name = "deno"
+description = "Fixture native plugin"
+aliases = ["denojs"]
+legacy_filenames = [".deno-version"]
+
+[[versions]]
+version = "1.40.5"
+source = "packages/1.40.5"
+note = "Current fixture release"
+
+[[env]]
+key = "DENO_HOME"
+value = "{install_dir}"
+
+[[env]]
+key = "VS_DENO_HOME"
+value = "{install_dir}"

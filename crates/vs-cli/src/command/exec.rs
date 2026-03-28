@@ -1,0 +1,11 @@
+use clap::Args;
+
+/// Executes a command with the resolved runtime environment.
+#[derive(Debug, Args)]
+pub struct ExecArgs {
+    /// Command to execute.
+    pub command: String,
+    /// Remaining command arguments.
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+    pub args: Vec<String>,
+}

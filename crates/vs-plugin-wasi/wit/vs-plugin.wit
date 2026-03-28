@@ -1,0 +1,7 @@
+package vs:plugin;
+
+world runtime {
+  export available-versions: func() -> list<string>;
+  export install-path: func(version: string) -> result<string, string>;
+  export env-keys: func(version: string, install-dir: string) -> list<tuple<string, string>>;
+}

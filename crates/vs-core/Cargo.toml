@@ -1,0 +1,28 @@
+[package]
+name = "vs-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+miette.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml.workspace = true
+thiserror.workspace = true
+vs-config = { path = "../vs-config" }
+vs-installer = { path = "../vs-installer" }
+vs-plugin-api = { path = "../vs-plugin-api" }
+vs-plugin-lua = { path = "../vs-plugin-lua" }
+vs-plugin-wasi = { path = "../vs-plugin-wasi" }
+vs-registry = { path = "../vs-registry" }
+vs-shell = { path = "../vs-shell" }
+walkdir.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true
