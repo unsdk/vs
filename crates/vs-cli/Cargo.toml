@@ -18,10 +18,12 @@ path = "src/main.rs"
 anyhow.workspace = true
 clap.workspace = true
 clap_complete.workspace = true
+dialoguer.workspace = true
 miette.workspace = true
 vs-config = { path = "../vs-config" }
 vs-core = { path = "../vs-core" }
 vs-plugin-api = { path = "../vs-plugin-api" }
+vs-registry = { path = "../vs-registry" }
 
 [dev-dependencies]
 tempfile.workspace = true

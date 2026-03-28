@@ -1,5 +1,7 @@
 mod cli;
 mod command;
+mod output;
+mod tui;
 
 use std::io;
 use std::process;
@@ -11,6 +13,11 @@ use vs_core::{App, UseScope};
 
 use crate::cli::{Cli, Commands};
 use crate::command::{BackendArg, CompletionArgs, ConfigArgs};
+use crate::output::{
+    print_available_plugins, print_current_tool, print_current_tools, print_installed_versions,
+    print_plugin_info, print_search_versions, print_status,
+};
+use crate::tui::{run_search_tui, should_use_interactive_tui};
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -37,100 +44,63 @@ fn run(cli: Cli) -> Result<i32> {
 fn run_with_app(app: App, command: Commands) -> Result<i32> {
     match command {
         Commands::Available(_) => {
-            for entry in app.available_plugins()? {
-                println!(
-                    "{} [{}] {}",
-                    entry.name,
-                    backend_label(entry.backend),
-                    entry
-                        .description
-                        .unwrap_or_else(|| String::from("No description"))
-                );
-            }
+            let entries = app.available_plugins()?;
+            print_available_plugins(&entries);
             Ok(0)
         }
         Commands::Add(args) => {
             let backend = args.backend.map(BackendArg::into);
             let entry = app.add_plugin(&args.name, args.source, backend)?;
-            println!("Added plugin {} from {}", entry.name, entry.source);
+            print_status(&format!(
+                "Added plugin {} from {}",
+                entry.name, entry.source
+            ));
             Ok(0)
         }
         Commands::Remove(args) => {
             let removed = app.remove_plugin(&args.name)?;
             if removed {
-                println!("Removed plugin {}", args.name);
+                print_status(&format!("Removed plugin {}", args.name));
             } else {
-                println!("Plugin {} was not present", args.name);
+                print_status(&format!("Plugin {} was not present", args.name));
             }
             Ok(0)
         }
         Commands::Update(_) => {
             let updated = app.update_registry()?;
-            println!("Updated {} registry entries", updated);
+            print_status(&format!("Updated {} registry entries", updated));
             Ok(0)
         }
         Commands::Info(args) => {
             let info = app.plugin_info(&args.name)?;
-            println!("Name: {}", info.manifest.name);
-            println!("Backend: {}", backend_label(info.manifest.backend));
-            println!("Source: {}", info.manifest.source.display());
-            println!(
-                "Description: {}",
-                info.manifest
-                    .description
-                    .unwrap_or_else(|| String::from("No description"))
-            );
-            println!(
-                "Available versions: {}",
-                info.available_versions
-                    .iter()
-                    .map(|version| version.version.as_str())
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            );
-            println!(
-                "Installed versions: {}",
-                if info.installed_versions.is_empty() {
-                    String::from("<none>")
-                } else {
-                    info.installed_versions.join(", ")
-                }
-            );
+            print_plugin_info(&info);
             Ok(0)
         }
         Commands::Search(args) => {
-            for version in app.search_versions(&args.plugin, &args.args)? {
-                let note_suffix = version
-                    .note
-                    .as_deref()
-                    .map(str::trim)
-                    .filter(|note| !note.is_empty())
-                    .map(|note| format!(" ({note})"))
-                    .unwrap_or_default();
-                let additions_suffix = if version.additions.is_empty() {
-                    String::new()
-                } else {
-                    let additions = version
-                        .additions
-                        .iter()
-                        .map(|addition| format!("{} {}", addition.name, addition.version))
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    format!(" [{additions}]")
-                };
-                println!("{}{}{}", version.version, note_suffix, additions_suffix);
+            let versions = app.search_versions(&args.plugin, &args.args)?;
+            let installed_versions = app
+                .list_installed_versions()?
+                .into_iter()
+                .filter(|installed| installed.plugin == args.plugin)
+                .map(|installed| installed.version)
+                .collect::<Vec<_>>();
+
+            if should_use_interactive_tui() {
+                return run_search_tui(&app, &args.plugin, &versions);
             }
+
+            print_search_versions(&args.plugin, &versions, &installed_versions);
             Ok(0)
         }
         Commands::Install(args) => {
             let (plugin, version) = parse_tool_spec(&args.spec)?;
             let installed = app.install_plugin_version(&plugin, version.as_deref())?;
-            println!(
+            print_status(&format!(
                 "Installed {} {} at {}",
                 installed.plugin,
                 installed.version,
                 installed.install_dir.display()
-            );
+            ));
             Ok(0)
         }
         Commands::Uninstall(args) => {
@@ -138,9 +108,9 @@ fn run_with_app(app: App, command: Commands) -> Result<i32> {
             let version = version.context("uninstall requires plugin@version")?;
             let removed = app.uninstall_plugin_version(&plugin, &version)?;
             if removed {
-                println!("Uninstalled {} {}", plugin, version);
+                print_status(&format!("Uninstalled {} {}", plugin, version));
             } else {
-                println!("{} {} was not installed", plugin, version);
+                print_status(&format!("{} {} was not installed", plugin, version));
             }
             Ok(0)
         }
@@ -148,57 +118,36 @@ fn run_with_app(app: App, command: Commands) -> Result<i32> {
             let (plugin, version) = parse_tool_spec(&args.spec)?;
             let version = version.context("use requires plugin@version")?;
             let installed = app.use_tool(&plugin, &version, args.scope(), args.unlink)?;
-            println!(
+            print_status(&format!(
                 "Using {} {} in {} scope",
                 installed.plugin,
                 installed.version,
                 scope_label(args.scope())
-            );
+            ));
             Ok(0)
         }
         Commands::Unuse(args) => {
             app.unuse_tool(&args.plugin, args.scope())?;
-            println!(
+            print_status(&format!(
                 "Removed {} from {} scope",
                 args.plugin,
                 scope_label(args.scope())
-            );
+            ));
             Ok(0)
         }
         Commands::List(_) => {
-            for entry in app.list_installed_versions()? {
-                println!(
-                    "{} {} {}",
-                    entry.plugin,
-                    entry.version,
-                    entry.install_dir.display()
-                );
-            }
+            let installed = app.list_installed_versions()?;
+            let current = app.current_tools()?;
+            print_installed_versions(&installed, &current);
             Ok(0)
         }
         Commands::Current(args) => {
             if let Some(plugin) = args.plugin {
-                if let Some(current) = app.current_tool(&plugin)? {
-                    println!(
-                        "{} {} {} {}",
-                        current.plugin,
-                        current.version,
-                        scope_name(current.scope),
-                        current.source.display()
-                    );
-                } else {
-                    println!("{} is not active", plugin);
-                }
+                let current = app.current_tool(&plugin)?;
+                print_current_tool(current.as_ref(), &plugin);
             } else {
-                for current in app.current_tools()? {
-                    println!(
-                        "{} {} {} {}",
-                        current.plugin,
-                        current.version,
-                        scope_name(current.scope),
-                        current.source.display()
-                    );
-                }
+                let current = app.current_tools()?;
+                print_current_tools(&current);
             }
             Ok(0)
         }
@@ -212,12 +161,12 @@ fn run_with_app(app: App, command: Commands) -> Result<i32> {
         }
         Commands::Upgrade(args) => {
             let installed = app.upgrade_plugin(&args.plugin)?;
-            println!(
+            print_status(&format!(
                 "Installed latest {} {} at {}",
                 installed.plugin,
                 installed.version,
                 installed.install_dir.display()
-            );
+            ));
             Ok(0)
         }
         Commands::Activate(args) => {
@@ -227,11 +176,11 @@ fn run_with_app(app: App, command: Commands) -> Result<i32> {
         Commands::Exec(args) => Ok(app.exec(&args.command, &args.args)?),
         Commands::Migrate(args) => {
             let summary = app.migrate(args.source)?;
-            println!(
+            print_status(&format!(
                 "Migrated {} roots from {}",
                 summary.copied_roots,
                 summary.source_home.display()
-            );
+            ));
             Ok(0)
         }
         Commands::HookEnv(args) => {
@@ -306,26 +255,10 @@ fn parse_tool_spec(spec: &str) -> Result<(String, Option<String>)> {
     }
 }
 
-fn backend_label(backend: vs_plugin_api::PluginBackendKind) -> &'static str {
-    match backend {
-        vs_plugin_api::PluginBackendKind::Lua => "lua",
-        vs_plugin_api::PluginBackendKind::Wasi => "wasi",
-    }
-}
-
 fn scope_label(scope: UseScope) -> &'static str {
     match scope {
         UseScope::Global => "global",
         UseScope::Project => "project",
         UseScope::Session => "session",
-    }
-}
-
-fn scope_name(scope: vs_config::Scope) -> &'static str {
-    match scope {
-        vs_config::Scope::Project => "project",
-        vs_config::Scope::Session => "session",
-        vs_config::Scope::Global => "global",
-        vs_config::Scope::System => "system",
     }
 }
