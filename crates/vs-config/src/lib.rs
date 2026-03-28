@@ -65,11 +65,7 @@ mod tests {
     fn resolve_home_should_prefer_vs_home() -> Result<(), Box<dyn Error>> {
         let temp_dir = TempDir::new()?;
         let explicit_home = temp_dir.path().join("explicit");
-        let layout = resolve_home_with(
-            Some(explicit_home.clone()),
-            Some(temp_dir.path().join("legacy")),
-            temp_dir.path().join("user"),
-        )?;
+        let layout = resolve_home_with(Some(explicit_home.clone()), temp_dir.path().join("user"))?;
 
         assert_eq!(layout.active_home, explicit_home);
         assert!(layout.migration_candidates.is_empty());
