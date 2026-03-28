@@ -1,7 +1,7 @@
 use std::io::{IsTerminal, stdin, stdout};
 
 use anyhow::Result;
-use dialoguer::{FuzzySelect, theme::ColorfulTheme};
+use dialoguer::{Confirm, FuzzySelect, theme::ColorfulTheme};
 use vs_core::App;
 use vs_plugin_api::AvailableVersion;
 
@@ -16,23 +16,40 @@ pub fn run_search_tui(app: &App, plugin: &str, versions: &[AvailableVersion]) ->
         return Ok(0);
     }
 
-    let labels = versions.iter().map(version_label).collect::<Vec<_>>();
-    let selection = FuzzySelect::with_theme(&ColorfulTheme::default())
-        .with_prompt(format!("Please select a version of {plugin} to install"))
-        .items(&labels)
-        .default(0)
-        .interact_opt()?;
+    let selection = select_version(plugin, versions)?;
 
     if let Some(index) = selection {
         let selected = &versions[index];
         let installed = app.install_plugin_version(plugin, Some(&selected.version))?;
         println!(
-            "Installed {} {} at {}",
-            installed.plugin,
-            installed.version,
-            installed.install_dir.display()
+            "Install {}@{} success! ",
+            installed.plugin, installed.version
+        );
+        println!(
+            "Please use `vs use {}@{}` to use it.",
+            installed.plugin, installed.version
         );
     }
 
     Ok(0)
+}
+
+pub fn prompt_for_version_selection(plugin: &str) -> Result<bool> {
+    Confirm::with_theme(&ColorfulTheme::default())
+        .with_prompt(format!(
+            "No {plugin} version provided, do you want to select a version to install?"
+        ))
+        .default(false)
+        .interact()
+        .map_err(Into::into)
+}
+
+pub fn select_version(plugin: &str, versions: &[AvailableVersion]) -> Result<Option<usize>> {
+    let labels = versions.iter().map(version_label).collect::<Vec<_>>();
+    FuzzySelect::with_theme(&ColorfulTheme::default())
+        .with_prompt(format!("Please select a version of {plugin} to install"))
+        .items(&labels)
+        .default(0)
+        .interact_opt()
+        .map_err(Into::into)
 }

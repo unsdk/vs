@@ -15,6 +15,7 @@ clap_complete = "4.5.52"
 dialoguer = { version = "0.12.0", features = ["fuzzy-select"] }
 dirs = "6.0.0"
 flate2 = "1.1.5"
+indicatif = "0.18.0"
 miette = { version = "7.6.0", features = ["fancy"] }
 mlua = { version = "0.10.5", features = ["lua54", "serialize", "vendored"] }
 md-5 = "0.10.6"

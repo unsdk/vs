@@ -1,7 +1,8 @@
 use std::fs;
-use std::io::Cursor;
+use std::io::{Cursor, Read};
 use std::path::{Path, PathBuf};
 
+use indicatif::{ProgressBar, ProgressStyle};
 use md5::Md5;
 use reqwest::blocking::Client;
 use sha1::Sha1;
@@ -74,6 +75,8 @@ impl Installer {
                     InstallerError::Validation(String::from("install receipt is missing"))
                 });
         }
+
+        println!("Preinstalling {}@{}...", plan.plugin, plan.version);
 
         let staging_root = self.home.join("cache").join(&plan.plugin).join(".staging");
         fs::create_dir_all(&staging_root)?;
@@ -176,7 +179,11 @@ impl Installer {
                 if let Some(checksum) = artifact.checksum.as_ref() {
                     verify_checksum(temp_file.path(), checksum)?;
                 }
-                self.install_from_download(url, &bytes, &target_path)?;
+                self.install_from_download(
+                    &temp_file.path().display().to_string(),
+                    &bytes,
+                    &target_path,
+                )?;
             }
         }
 
@@ -335,13 +342,44 @@ fn download_bytes(
         .send()
         .and_then(reqwest::blocking::Response::error_for_status)
         .map_err(|error| InstallerError::Download(error.to_string()))?;
-    response
-        .bytes()
-        .map(|bytes| bytes.to_vec())
-        .map_err(|error| InstallerError::Download(error.to_string()))
+    let total_size = response.content_length();
+    let progress_bar = create_download_progress_bar(total_size);
+    let mut response = response;
+    let mut bytes = Vec::new();
+    let mut buffer = [0_u8; 8192];
+
+    loop {
+        let read = response
+            .read(&mut buffer)
+            .map_err(|error| InstallerError::Download(error.to_string()))?;
+        if read == 0 {
+            break;
+        }
+        bytes.extend_from_slice(&buffer[..read]);
+        progress_bar.inc(read as u64);
+    }
+
+    progress_bar.finish_and_clear();
+    Ok(bytes)
+}
+
+fn create_download_progress_bar(total_size: Option<u64>) -> ProgressBar {
+    let progress_bar = match total_size {
+        Some(total_size) => ProgressBar::new(total_size),
+        None => ProgressBar::new_spinner(),
+    };
+
+    let style = ProgressStyle::with_template(
+        "Downloading... {wide_bar} {bytes}/{total_bytes} ({bytes_per_sec})",
+    )
+    .unwrap_or_else(|_| ProgressStyle::default_bar())
+    .progress_chars("=> ");
+    progress_bar.set_style(style);
+    progress_bar
 }
 
 fn verify_checksum(path: &Path, checksum: &Checksum) -> Result<(), InstallerError> {
+    println!("Verifying checksum {}...", checksum.value);
     let bytes = fs::read(path)?;
     let actual = match checksum.algorithm.as_str() {
         "sha256" => format!("{:x}", Sha256::digest(&bytes)),
@@ -365,6 +403,7 @@ fn verify_checksum(path: &Path, checksum: &Checksum) -> Result<(), InstallerErro
 }
 
 fn extract_zip(bytes: &[u8], target_path: &Path) -> Result<(), InstallerError> {
+    println!("Unpacking {}...", target_path.display());
     fs::create_dir_all(target_path)?;
     let mut archive = ZipArchive::new(Cursor::new(bytes))?;
     for index in 0..archive.len() {
@@ -387,12 +426,14 @@ fn extract_zip(bytes: &[u8], target_path: &Path) -> Result<(), InstallerError> {
 }
 
 fn extract_tar(bytes: &[u8], target_path: &Path) -> Result<(), InstallerError> {
+    println!("Unpacking {}...", target_path.display());
     fs::create_dir_all(target_path)?;
     let mut archive = Archive::new(Cursor::new(bytes));
     archive.unpack(target_path).map_err(InstallerError::from)
 }
 
 fn extract_tar_gz(bytes: &[u8], target_path: &Path) -> Result<(), InstallerError> {
+    println!("Unpacking {}...", target_path.display());
     fs::create_dir_all(target_path)?;
     let decoder = flate2::read::GzDecoder::new(Cursor::new(bytes));
     let mut archive = Archive::new(decoder);
@@ -400,6 +441,7 @@ fn extract_tar_gz(bytes: &[u8], target_path: &Path) -> Result<(), InstallerError
 }
 
 fn extract_tar_xz(bytes: &[u8], target_path: &Path) -> Result<(), InstallerError> {
+    println!("Unpacking {}...", target_path.display());
     fs::create_dir_all(target_path)?;
     let decoder = XzDecoder::new(Cursor::new(bytes));
     let mut archive = Archive::new(decoder);

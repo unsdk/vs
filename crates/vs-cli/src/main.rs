@@ -17,7 +17,7 @@ use crate::output::{
     print_available_plugins, print_current_tool, print_current_tools, print_installed_versions,
     print_plugin_info, print_search_versions, print_status,
 };
-use crate::tui::{run_search_tui, should_use_interactive_tui};
+use crate::tui::{prompt_for_version_selection, run_search_tui, should_use_interactive_tui};
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -94,13 +94,24 @@ fn run_with_app(app: App, command: Commands) -> Result<i32> {
         }
         Commands::Install(args) => {
             let (plugin, version) = parse_tool_spec(&args.spec)?;
-            let installed = app.install_plugin_version(&plugin, version.as_deref())?;
-            print_status(&format!(
-                "Installed {} {} at {}",
-                installed.plugin,
-                installed.version,
-                installed.install_dir.display()
-            ));
+            if let Some(version) = version {
+                let installed = app.install_plugin_version(&plugin, Some(&version))?;
+                print_status(&format!(
+                    "Install {}@{} success! ",
+                    installed.plugin, installed.version
+                ));
+                print_status(&format!(
+                    "Please use `vs use {}@{}` to use it.",
+                    installed.plugin, installed.version
+                ));
+            } else if should_use_interactive_tui() {
+                if prompt_for_version_selection(&plugin)? {
+                    let versions = app.search_versions(&plugin, &[])?;
+                    return run_search_tui(&app, &plugin, &versions);
+                }
+            } else {
+                anyhow::bail!("install requires specifying a version for {}", plugin);
+            }
             Ok(0)
         }
         Commands::Uninstall(args) => {
