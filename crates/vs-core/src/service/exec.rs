@@ -97,6 +97,7 @@ fn resolve_command_path(command: &str, preferred_paths: &[PathBuf]) -> Option<Pa
 mod tests {
     use std::error::Error;
     use std::fs;
+    use std::path::Path;
 
     use tempfile::TempDir;
 
@@ -134,7 +135,22 @@ mod tests {
         let resolved = resolve_command_path("node", &[preferred, fallback])
             .ok_or_else(|| std::io::Error::other("missing resolved command"))?;
 
-        assert_eq!(resolved, preferred_binary);
+        assert_path_matches(&resolved, &preferred_binary);
         Ok(())
+    }
+
+    #[cfg(windows)]
+    fn assert_path_matches(actual: &Path, expected: &Path) {
+        assert!(
+            actual
+                .to_string_lossy()
+                .eq_ignore_ascii_case(expected.to_string_lossy().as_ref()),
+            "assertion failed: actual path {actual:?} does not match expected path {expected:?}",
+        );
+    }
+
+    #[cfg(not(windows))]
+    fn assert_path_matches(actual: &Path, expected: &Path) {
+        assert_eq!(actual, expected);
     }
 }
