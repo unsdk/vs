@@ -21,7 +21,7 @@ mod tests {
     #[cfg(feature = "lua")]
     use tempfile::TempDir;
     #[cfg(feature = "lua")]
-    use vs_config::HomeLayout;
+    use vs_config::{AppConfig, HomeLayout, RegistryConfig, write_app_config};
     #[cfg(feature = "lua")]
     use vs_plugin_api::PluginBackendKind;
 
@@ -56,6 +56,42 @@ mod tests {
 
         let config = fs::read_to_string(cwd.join(".vs.toml"))?;
         assert!(config.contains("nodejs = \"20.11.1\""));
+        Ok(())
+    }
+
+    #[cfg(feature = "lua")]
+    #[test]
+    fn available_plugins_should_bootstrap_registry_when_source_is_configured()
+    -> Result<(), Box<dyn Error>> {
+        let temp_dir = TempDir::new()?;
+        let home = temp_dir.path().join("home");
+        let cwd = temp_dir.path().join("project");
+        fs::create_dir_all(&cwd)?;
+        let registry_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../fixtures/registry/index.json");
+
+        write_app_config(
+            &home,
+            &AppConfig {
+                legacy_version_file: true,
+                registry: RegistryConfig {
+                    source: Some(registry_path.display().to_string()),
+                },
+            },
+        )?;
+
+        let app = App::new(
+            HomeLayout {
+                active_home: home,
+                migration_candidates: Vec::new(),
+            },
+            cwd,
+            Some(String::from("session")),
+        )?;
+
+        let entries = app.available_plugins()?;
+        assert!(!entries.is_empty());
+        assert!(entries.iter().any(|entry| entry.name == "nodejs"));
         Ok(())
     }
 

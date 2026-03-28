@@ -114,9 +114,27 @@ impl App {
     }
 
     pub(crate) fn resolve_registry_entry(&self, name: &str) -> Result<RegistryEntry, CoreError> {
+        if let Some(entry) = self.registry.resolve(name)? {
+            return Ok(entry);
+        }
+
+        self.ensure_registry_index_loaded()?;
         self.registry
             .resolve(name)?
             .ok_or_else(|| CoreError::UnknownPlugin(name.to_string()))
+    }
+
+    pub(crate) fn ensure_registry_index_loaded(&self) -> Result<(), CoreError> {
+        if !self.registry.available_plugins()?.is_empty() {
+            return Ok(());
+        }
+
+        let config = self.app_config()?;
+        if config.registry.source.is_some() {
+            self.update_registry()?;
+        }
+
+        Ok(())
     }
 
     pub(crate) fn load_plugin(&self, entry: &RegistryEntry) -> Result<Box<dyn Plugin>, CoreError> {

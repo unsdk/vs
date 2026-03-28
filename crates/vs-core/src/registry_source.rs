@@ -15,8 +15,12 @@ struct VfoxRegistryEntry {
     name: String,
     #[serde(default)]
     description: Option<String>,
+    #[serde(default)]
+    desc: Option<String>,
     #[serde(default, alias = "download_url")]
     download_url: Option<String>,
+    #[serde(default)]
+    homepage: Option<String>,
     #[serde(default)]
     aliases: Vec<String>,
 }
@@ -55,13 +59,16 @@ pub fn parse_registry_entries(json: &str) -> Result<Vec<RegistryEntry>, serde_js
             Ok(entries) => Ok(entries
                 .into_iter()
                 .filter_map(|entry| {
-                    entry.download_url.map(|source| RegistryEntry {
-                        name: entry.name,
-                        source,
-                        backend: PluginBackendKind::Lua,
-                        description: entry.description,
-                        aliases: entry.aliases,
-                    })
+                    entry
+                        .download_url
+                        .or(entry.homepage)
+                        .map(|source| RegistryEntry {
+                            name: entry.name,
+                            source,
+                            backend: PluginBackendKind::Lua,
+                            description: entry.description.or(entry.desc),
+                            aliases: entry.aliases,
+                        })
                 })
                 .collect()),
             Err(_) => Err(entry_error),
@@ -91,6 +98,32 @@ mod tests {
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].name, "nodejs");
         assert_eq!(entries[0].source, "https://example.com/nodejs.zip");
+        Ok(())
+    }
+
+    #[test]
+    fn parse_registry_entries_should_accept_real_vfox_index_shape() -> Result<(), Box<dyn Error>> {
+        let entries = parse_registry_entries(
+            r#"
+            [
+              {
+                "name": "nodejs",
+                "desc": "Node.js runtime environment.",
+                "homepage": "https://github.com/version-fox/vfox-nodejs"
+              }
+            ]
+            "#,
+        )?;
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].name, "nodejs");
+        assert_eq!(
+            entries[0].source,
+            "https://github.com/version-fox/vfox-nodejs"
+        );
+        assert_eq!(
+            entries[0].description.as_deref(),
+            Some("Node.js runtime environment.")
+        );
         Ok(())
     }
 

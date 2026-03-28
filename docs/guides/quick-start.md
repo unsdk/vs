@@ -43,6 +43,8 @@ When `vs` is built with the `lua` feature and `registry.source` is unset, `vs up
 
 `https://version-fox.github.io/vfox-plugins/index.json`
 
+If the local registry cache is still empty, commands such as `vs available`, `vs search`, and `vs add <name>` automatically bootstrap the registry index on first use.
+
 ## 4. Add a plugin
 
 ```bash

@@ -49,7 +49,8 @@ impl App {
             return Ok(final_dir);
         }
 
-        let archive_bytes = fetch_url_bytes(url)?;
+        let archive_url = normalize_remote_plugin_archive_url(url);
+        let archive_bytes = fetch_url_bytes(&archive_url)?;
         let staging_root = self.plugin_sources_dir().join(".staging");
         fs::create_dir_all(&staging_root)?;
         let temp_dir = Builder::new().prefix("plugin-").tempdir_in(&staging_root)?;
@@ -107,11 +108,33 @@ fn normalize_extracted_root(destination: &Path) -> Result<PathBuf, CoreError> {
     Ok(destination.to_path_buf())
 }
 
+fn normalize_remote_plugin_archive_url(source: &str) -> String {
+    github_repo_zipball_url(source).unwrap_or_else(|| source.to_string())
+}
+
+fn github_repo_zipball_url(source: &str) -> Option<String> {
+    let source = source.trim_end_matches('/');
+    let source = source.strip_suffix(".git").unwrap_or(source);
+
+    let stripped = source
+        .strip_prefix("https://github.com/")
+        .or_else(|| source.strip_prefix("http://github.com/"))?;
+    let mut parts = stripped.split('/');
+    let owner = parts.next()?;
+    let repo = parts.next()?;
+    if owner.is_empty() || repo.is_empty() {
+        return None;
+    }
+    Some(format!(
+        "https://api.github.com/repos/{owner}/{repo}/zipball"
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use std::error::Error;
 
-    use super::is_remote_source;
+    use super::{github_repo_zipball_url, is_remote_source, normalize_remote_plugin_archive_url};
 
     #[test]
     fn is_remote_source_should_match_http_and_https() -> Result<(), Box<dyn Error>> {
@@ -119,6 +142,25 @@ mod tests {
         assert!(is_remote_source("http://example.com/plugin.zip"));
         assert!(!is_remote_source("/tmp/plugin"));
         assert!(!is_remote_source("../plugin"));
+        Ok(())
+    }
+
+    #[test]
+    fn github_repo_zipball_url_should_convert_repository_homepage() -> Result<(), Box<dyn Error>> {
+        let archive_url = github_repo_zipball_url("https://github.com/version-fox/vfox-nodejs")
+            .ok_or_else(|| std::io::Error::other("missing github archive url"))?;
+        assert_eq!(
+            archive_url,
+            "https://api.github.com/repos/version-fox/vfox-nodejs/zipball"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn normalize_remote_plugin_archive_url_should_keep_archive_urls() -> Result<(), Box<dyn Error>>
+    {
+        let archive_url = normalize_remote_plugin_archive_url("https://example.com/plugin.zip");
+        assert_eq!(archive_url, "https://example.com/plugin.zip");
         Ok(())
     }
 }
