@@ -2,6 +2,8 @@
 
 mod backend;
 mod loader;
+mod model;
+mod module;
 
 pub use backend::LuaBackend;
 pub use loader::{LuaPlugin, lua_library_dir};
@@ -20,7 +22,7 @@ mod tests {
         let root =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/plugins/nodejs-lua");
         let plugin = LuaPlugin::load(&root)?;
-        let versions = plugin.available_versions()?;
+        let versions = plugin.available_versions(&[])?;
         assert_eq!(versions.len(), 2);
         assert_eq!(versions[0].version, "20.11.1");
         Ok(())

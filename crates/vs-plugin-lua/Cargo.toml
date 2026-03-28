@@ -6,11 +6,17 @@ license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+flate2.workspace = true
 mlua.workspace = true
+reqwest.workspace = true
+scraper.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+tar.workspace = true
 thiserror.workspace = true
 vs-plugin-api = { path = "../vs-plugin-api" }
+xz2.workspace = true
+zip.workspace = true
 
 [lints]
 workspace = true

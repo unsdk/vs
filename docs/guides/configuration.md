@@ -9,7 +9,7 @@ The main home is:
 - `VS_HOME`, when set
 - otherwise `~/.vs`
 
-Legacy homes such as `~/.vfox`, `~/.version-fox`, and `VFOX_HOME` are treated as migration candidates.
+The default path is still `~/.vs`, but the internal layout is kept close to `vfox` for compatibility work. Legacy homes such as `~/.vfox`, `~/.version-fox`, and `VFOX_HOME` are treated as migration candidates.
 
 ## Global config file
 
@@ -19,19 +19,33 @@ The home config file is:
 
 Current keys:
 
-- `legacyVersionFile`
-- `registry.source`
+- `proxy.enable`
+- `proxy.url`
+- `storage.sdkPath`
+- `registry.address`
+- `legacyVersionFile.enable`
+- `legacyVersionFile.strategy`
+- `cache.availableHookDuration`
 
-If `vs` is built with the `lua` feature and `registry.source` is not set, the effective default is:
+If `vs` is built with the `lua` feature and `registry.address` is not set, the effective default is:
 
-`https://version-fox.github.io/vfox-plugins/index.json`
+`https://version-fox.github.io/vfox-plugins`
 
 Example:
 
 ```yaml
-legacyVersionFile: true
+proxy:
+  enable: false
+  url: ""
+storage:
+  sdkPath: ""
 registry:
-  source: /absolute/path/to/fixtures/registry/index.json
+  address: /absolute/path/to/fixtures/registry/index.json
+legacyVersionFile:
+  enable: true
+  strategy: specified
+cache:
+  availableHookDuration: 12h
 ```
 
 ## Tool version files
@@ -71,11 +85,11 @@ vs config --list
 Set a value:
 
 ```bash
-vs config registry.source /absolute/path/to/index.json
+vs config registry.address /absolute/path/to/index.json
 ```
 
 Unset a value:
 
 ```bash
-vs config --unset registry.source
+vs config --unset registry.address
 ```

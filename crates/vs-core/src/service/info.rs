@@ -6,7 +6,7 @@ impl App {
         let entry = self.resolve_registry_entry(name)?;
         let plugin = self.load_plugin(&entry)?;
         let manifest = plugin.manifest().clone();
-        let available_versions = plugin.available_versions()?;
+        let available_versions = plugin.available_versions(&[])?;
         let installed_versions = self.installer.installed_versions(&manifest.name)?;
 
         Ok(PluginInfo {

@@ -1,6 +1,6 @@
 # Migration from vfox
 
-`vs` keeps its public branding and default paths separate from `vfox`, but it can import compatible state.
+`vs` keeps its public branding, while its home and config layout now stay intentionally close to `vfox` so plugin and config compatibility remain practical.
 
 ## What `vs migrate` copies
 

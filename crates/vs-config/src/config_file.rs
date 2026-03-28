@@ -58,16 +58,44 @@ pub fn write_tool_versions(path: &Path, tools: &ToolVersions) -> Result<(), Conf
 pub fn flatten_app_config(config: &AppConfig) -> Vec<(String, String)> {
     vec![
         (
-            String::from("legacyVersionFile"),
-            config.legacy_version_file.to_string(),
+            String::from("proxy.enable"),
+            config.proxy.enable.to_string(),
         ),
         (
-            String::from("registry.source"),
-            config
-                .registry
-                .source
-                .clone()
-                .unwrap_or_else(|| String::from("<unset>")),
+            String::from("proxy.url"),
+            if config.proxy.url.is_empty() {
+                String::from("<unset>")
+            } else {
+                config.proxy.url.clone()
+            },
+        ),
+        (
+            String::from("storage.sdkPath"),
+            if config.storage.sdk_path.is_empty() {
+                String::from("<unset>")
+            } else {
+                config.storage.sdk_path.clone()
+            },
+        ),
+        (
+            String::from("registry.address"),
+            if config.registry.address.is_empty() {
+                String::from("<unset>")
+            } else {
+                config.registry.address.clone()
+            },
+        ),
+        (
+            String::from("legacyVersionFile.enable"),
+            config.legacy_version_file.enable.to_string(),
+        ),
+        (
+            String::from("legacyVersionFile.strategy"),
+            config.legacy_version_file.strategy.clone(),
+        ),
+        (
+            String::from("cache.availableHookDuration"),
+            config.cache.available_hook_duration.clone(),
         ),
     ]
 }
@@ -79,8 +107,25 @@ pub fn set_app_config_value(
     value: &str,
 ) -> Result<(), ConfigError> {
     match key {
-        "legacyVersionFile" => {
-            config.legacy_version_file =
+        "proxy.enable" => {
+            config.proxy.enable = value
+                .parse::<bool>()
+                .map_err(|_| ConfigError::InvalidValue {
+                    key: key.to_string(),
+                    value: value.to_string(),
+                })?;
+        }
+        "proxy.url" => {
+            config.proxy.url = value.to_string();
+        }
+        "storage.sdkPath" => {
+            config.storage.sdk_path = value.to_string();
+        }
+        "registry.address" => {
+            config.registry.address = value.to_string();
+        }
+        "legacyVersionFile.enable" => {
+            config.legacy_version_file.enable =
                 value
                     .parse::<bool>()
                     .map_err(|_| ConfigError::InvalidValue {
@@ -88,8 +133,11 @@ pub fn set_app_config_value(
                         value: value.to_string(),
                     })?;
         }
-        "registry.source" => {
-            config.registry.source = Some(value.to_string());
+        "legacyVersionFile.strategy" => {
+            config.legacy_version_file.strategy = value.to_string();
+        }
+        "cache.availableHookDuration" => {
+            config.cache.available_hook_duration = value.to_string();
         }
         _ => {
             return Err(ConfigError::UnknownKey(key.to_string()));
@@ -101,11 +149,27 @@ pub fn set_app_config_value(
 /// Unsets a top-level config value by key.
 pub fn unset_app_config_value(config: &mut AppConfig, key: &str) -> Result<(), ConfigError> {
     match key {
-        "legacyVersionFile" => {
-            config.legacy_version_file = AppConfig::default().legacy_version_file;
+        "proxy.enable" => {
+            config.proxy.enable = AppConfig::default().proxy.enable;
         }
-        "registry.source" => {
-            config.registry.source = None;
+        "proxy.url" => {
+            config.proxy.url.clear();
+        }
+        "storage.sdkPath" => {
+            config.storage.sdk_path.clear();
+        }
+        "registry.address" => {
+            config.registry.address.clear();
+        }
+        "legacyVersionFile.enable" => {
+            config.legacy_version_file.enable = AppConfig::default().legacy_version_file.enable;
+        }
+        "legacyVersionFile.strategy" => {
+            config.legacy_version_file.strategy = AppConfig::default().legacy_version_file.strategy;
+        }
+        "cache.availableHookDuration" => {
+            config.cache.available_hook_duration =
+                AppConfig::default().cache.available_hook_duration;
         }
         _ => {
             return Err(ConfigError::UnknownKey(key.to_string()));

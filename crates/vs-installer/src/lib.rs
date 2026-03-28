@@ -17,6 +17,9 @@ pub enum InstallerError {
     /// An I/O operation failed.
     #[error(transparent)]
     Io(#[from] std::io::Error),
+    /// A download failed.
+    #[error("artifact download failed: {0}")]
+    Download(String),
     /// A directory walk failed.
     #[error("failed to walk directory tree: {0}")]
     Walk(String),
@@ -29,6 +32,9 @@ pub enum InstallerError {
     /// The install validation step failed.
     #[error("install validation failed: {0}")]
     Validation(String),
+    /// An archive could not be unpacked.
+    #[error(transparent)]
+    Archive(#[from] zip::result::ZipError),
 }
 
 #[cfg(test)]
@@ -37,7 +43,7 @@ mod tests {
     use std::fs;
 
     use tempfile::TempDir;
-    use vs_plugin_api::InstallPlan;
+    use vs_plugin_api::{InstallArtifact, InstallPlan, InstallSource};
 
     use super::Installer;
 
@@ -52,7 +58,14 @@ mod tests {
         let plan = InstallPlan {
             plugin: String::from("nodejs"),
             version: String::from("20.11.1"),
-            source_dir: source,
+            main: InstallArtifact {
+                name: String::from("nodejs"),
+                version: String::from("20.11.1"),
+                source: InstallSource::Directory { path: source },
+                note: None,
+                checksum: None,
+            },
+            additions: Vec::new(),
             legacy_filenames: Vec::new(),
         };
 

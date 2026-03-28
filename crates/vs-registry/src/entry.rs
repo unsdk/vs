@@ -27,6 +27,13 @@ impl RegistryEntry {
             source: self.source.clone().into(),
             description: self.description.clone(),
             aliases: self.aliases.clone(),
+            version: None,
+            homepage: None,
+            update_url: None,
+            manifest_url: None,
+            min_runtime_version: None,
+            notes: Vec::new(),
+            legacy_filenames: Vec::new(),
         }
     }
 

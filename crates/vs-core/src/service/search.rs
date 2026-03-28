@@ -1,11 +1,16 @@
-use vs_registry::RegistryEntry;
+use vs_plugin_api::AvailableVersion;
 
 use crate::{App, CoreError};
 
 impl App {
-    /// Searches the available registry index.
-    pub fn search_plugins(&self, query: &str) -> Result<Vec<RegistryEntry>, CoreError> {
-        self.ensure_registry_index_loaded()?;
-        self.registry.search(query).map_err(Into::into)
+    /// Lists available SDK versions for a plugin.
+    pub fn search_versions(
+        &self,
+        plugin_name: &str,
+        args: &[String],
+    ) -> Result<Vec<AvailableVersion>, CoreError> {
+        let entry = self.resolve_registry_entry(plugin_name)?;
+        let plugin = self.load_plugin(&entry)?;
+        plugin.available_versions(args).map_err(Into::into)
     }
 }

@@ -21,7 +21,10 @@ pub use legacy::{
 };
 pub use project::{find_project_file, preferred_project_file};
 pub use resolution::{global_tools_file, resolve_tool_version, session_tools_file};
-pub use types::{AppConfig, HomeLayout, RegistryConfig, ResolvedToolVersion, Scope, ToolVersions};
+pub use types::{
+    AppConfig, CacheConfig, HomeLayout, LegacyVersionFileConfig, ProxyConfig, RegistryConfig,
+    ResolvedToolVersion, Scope, StorageConfig, ToolVersions,
+};
 
 /// Errors returned by configuration services.
 #[derive(Debug, Error)]

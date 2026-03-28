@@ -1,21 +1,31 @@
-use crate::registry_source::{fetch_url_text, is_remote_registry_source, parse_registry_entries};
+use crate::registry_source::{
+    fetch_url_text, is_remote_registry_source, parse_registry_entries, registry_index_url,
+};
 use crate::{App, CoreError};
 
 impl App {
     /// Refreshes the searchable plugin index from the configured registry source.
     pub fn update_registry(&self) -> Result<usize, CoreError> {
         let config = self.app_config()?;
-        let source = config.registry.source.ok_or_else(|| {
-            CoreError::Unsupported(String::from("registry.source is not configured"))
-        })?;
-        let mut entries = if is_remote_registry_source(&source) {
-            let content = fetch_url_text(&source)?;
+        let source = config.registry.address;
+        if source.is_empty() {
+            return Err(CoreError::Unsupported(String::from(
+                "registry.address is not configured",
+            )));
+        }
+        let registry_source = if is_remote_registry_source(&source) {
+            registry_index_url(&source)
+        } else {
+            source
+        };
+        let mut entries = if is_remote_registry_source(&registry_source) {
+            let content = fetch_url_text(&registry_source)?;
             parse_registry_entries(&content).map_err(|error| CoreError::RegistrySource {
-                path: source.clone().into(),
+                path: registry_source.clone().into(),
                 message: error.to_string(),
             })?
         } else {
-            let path = self.normalize_source_path(&source);
+            let path = self.normalize_source_path(&registry_source);
             let content =
                 std::fs::read_to_string(&path).map_err(|error| CoreError::RegistrySource {
                     path: path.clone(),
@@ -27,8 +37,8 @@ impl App {
             })?
         };
 
-        if !is_remote_registry_source(&source) {
-            let path = self.normalize_source_path(&source);
+        if !is_remote_registry_source(&registry_source) {
+            let path = self.normalize_source_path(&registry_source);
             let base_dir = path.parent().unwrap_or(&self.cwd);
             for entry in &mut entries {
                 let source_path = std::path::PathBuf::from(&entry.source);

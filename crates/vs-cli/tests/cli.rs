@@ -41,7 +41,7 @@ fn cli_should_run_registry_install_use_and_exec_flow() -> Result<(), Box<dyn std
     assert_success(run(
         &home,
         &project,
-        &["config", "registry.source", registry_path.as_str()],
+        &["config", "registry.address", registry_path.as_str()],
     ));
     assert_success(run(&home, &project, &["update"]));
     assert_success(run(&home, &project, &["add", "nodejs"]));
@@ -72,7 +72,7 @@ fn cli_should_prefer_project_scope_and_support_unlink() -> Result<(), Box<dyn st
     assert_success(run(
         &home,
         &project,
-        &["config", "registry.source", registry_path.as_str()],
+        &["config", "registry.address", registry_path.as_str()],
     ));
     assert_success(run(&home, &project, &["update"]));
     assert_success(run(&home, &project, &["add", "nodejs"]));

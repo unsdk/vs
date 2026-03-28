@@ -9,7 +9,7 @@ impl App {
     ) -> Result<InstalledVersion, CoreError> {
         let entry = self.resolve_registry_entry(plugin_name)?;
         let plugin = self.load_plugin(&entry)?;
-        let available_versions = plugin.available_versions()?;
+        let available_versions = plugin.available_versions(&[])?;
         let selected_version = version
             .map(str::to_string)
             .or_else(|| {
@@ -24,11 +24,12 @@ impl App {
             })?;
 
         let plan = plugin.install_plan(&selected_version)?;
-        let install_dir = self.installer.install(&plan)?;
+        let runtime = self.installer.install(&plan)?;
+        plugin.post_install(&runtime)?;
         Ok(InstalledVersion {
             plugin: plugin_name.to_string(),
-            version: selected_version,
-            install_dir,
+            version: runtime.version,
+            install_dir: runtime.root_dir,
         })
     }
 }

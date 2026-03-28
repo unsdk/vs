@@ -3,7 +3,8 @@ use std::path::Path;
 
 use serde::Deserialize;
 use vs_plugin_api::{
-    AvailableVersion, EnvKey, InstallPlan, Plugin, PluginBackendKind, PluginError, PluginManifest,
+    AvailableVersion, EnvKey, InstallArtifact, InstallPlan, InstallSource, InstalledRuntime,
+    Plugin, PluginBackendKind, PluginError, PluginManifest,
 };
 
 #[derive(Debug, Deserialize)]
@@ -71,6 +72,13 @@ impl WasiPlugin {
                 source: source.to_path_buf(),
                 description: descriptor.plugin.description,
                 aliases: descriptor.plugin.aliases,
+                version: None,
+                homepage: None,
+                update_url: None,
+                manifest_url: None,
+                min_runtime_version: None,
+                notes: Vec::new(),
+                legacy_filenames: descriptor.plugin.legacy_filenames.clone(),
             },
             versions: descriptor.versions,
             env: descriptor.env,
@@ -84,13 +92,14 @@ impl Plugin for WasiPlugin {
         &self.manifest
     }
 
-    fn available_versions(&self) -> Result<Vec<AvailableVersion>, PluginError> {
+    fn available_versions(&self, _args: &[String]) -> Result<Vec<AvailableVersion>, PluginError> {
         Ok(self
             .versions
             .iter()
             .map(|version| AvailableVersion {
                 version: version.version.clone(),
                 note: version.note.clone(),
+                additions: Vec::new(),
             })
             .collect())
     }
@@ -107,12 +116,21 @@ impl Plugin for WasiPlugin {
         Ok(InstallPlan {
             plugin: self.manifest.name.clone(),
             version: version.version.clone(),
-            source_dir: self.manifest.source.join(&version.source),
+            main: InstallArtifact {
+                name: self.manifest.name.clone(),
+                version: version.version.clone(),
+                source: InstallSource::Directory {
+                    path: self.manifest.source.join(&version.source),
+                },
+                note: version.note.clone(),
+                checksum: None,
+            },
+            additions: Vec::new(),
             legacy_filenames: self.legacy_filenames.clone(),
         })
     }
 
-    fn env_keys(&self, _version: &str, install_dir: &Path) -> Result<Vec<EnvKey>, PluginError> {
+    fn env_keys(&self, runtime: &InstalledRuntime) -> Result<Vec<EnvKey>, PluginError> {
         Ok(self
             .env
             .iter()
@@ -120,7 +138,7 @@ impl Plugin for WasiPlugin {
                 key: entry.key.clone(),
                 value: entry
                     .value
-                    .replace("{install_dir}", &install_dir.display().to_string()),
+                    .replace("{install_dir}", &runtime.main.path.display().to_string()),
             })
             .collect())
     }

@@ -82,9 +82,9 @@ impl App {
 
     pub(crate) fn app_config(&self) -> Result<AppConfig, CoreError> {
         let mut config = read_app_config(self.home())?;
-        if config.registry.source.is_none() {
+        if config.registry.address.is_empty() {
             if let Some(default_source) = self.default_registry_source() {
-                config.registry.source = Some(default_source.to_string());
+                config.registry.address = default_source.to_string();
             }
         }
         Ok(config)
@@ -130,7 +130,7 @@ impl App {
         }
 
         let config = self.app_config()?;
-        if config.registry.source.is_some() {
+        if !config.registry.address.is_empty() {
             self.update_registry()?;
         }
 
@@ -325,17 +325,32 @@ impl App {
         }
     }
 
+    pub(crate) fn load_installed_runtime(
+        &self,
+        plugin: &str,
+        version: &str,
+    ) -> Result<Option<vs_plugin_api::InstalledRuntime>, CoreError> {
+        self.installer
+            .read_receipt(plugin, version)
+            .map_err(Into::into)
+    }
+
     pub(crate) fn build_env(&self) -> Result<EnvDelta, CoreError> {
         let current_tools = self.collect_current_tools()?;
         let mut delta = EnvDelta::default();
 
         for tool in &current_tools {
             let runtime_dir = self.effective_runtime_dir(tool);
-            delta.path_entries.push(bin_dir(&runtime_dir));
-            if let Ok(entry) = self.resolve_registry_entry(&tool.plugin) {
-                let plugin = self.load_plugin(&entry)?;
-                let env_keys = plugin.env_keys(&tool.version, &runtime_dir)?;
-                apply_env_keys(&mut delta, env_keys);
+            if let Some(runtime) = self.load_installed_runtime(&tool.plugin, &tool.version)? {
+                if let Ok(entry) = self.resolve_registry_entry(&tool.plugin) {
+                    let plugin = self.load_plugin(&entry)?;
+                    let env_keys = plugin.env_keys(&runtime)?;
+                    apply_env_keys(&mut delta, env_keys);
+                } else {
+                    delta.path_entries.push(bin_dir(runtime.main_path()));
+                }
+            } else {
+                delta.path_entries.push(bin_dir(&runtime_dir));
             }
         }
 
@@ -440,6 +455,10 @@ impl App {
 
 fn apply_env_keys(delta: &mut EnvDelta, env_keys: Vec<EnvKey>) {
     for env_key in env_keys {
-        delta.vars.push((env_key.key, env_key.value));
+        if env_key.key == "PATH" {
+            delta.path_entries.push(PathBuf::from(env_key.value));
+        } else {
+            delta.vars.push((env_key.key, env_key.value));
+        }
     }
 }

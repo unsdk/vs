@@ -18,7 +18,7 @@ mod tests {
         let root =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/plugins/deno-wasi");
         let plugin = WasiPlugin::load(&root)?;
-        let versions = plugin.available_versions()?;
+        let versions = plugin.available_versions(&[])?;
         assert_eq!(versions[0].version, "1.40.5");
         Ok(())
     }

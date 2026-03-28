@@ -39,30 +39,80 @@ pub struct HomeLayout {
 }
 
 /// Global configuration file for `vs`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default, rename_all = "camelCase")]
 pub struct AppConfig {
-    /// Enables legacy file scanning.
-    pub legacy_version_file: bool,
-    /// Optional registry source metadata.
+    /// Proxy configuration.
+    pub proxy: ProxyConfig,
+    /// SDK storage configuration.
+    pub storage: StorageConfig,
+    /// Registry configuration.
     pub registry: RegistryConfig,
+    /// Legacy version file settings.
+    pub legacy_version_file: LegacyVersionFileConfig,
+    /// Cache settings.
+    pub cache: CacheConfig,
 }
 
-impl Default for AppConfig {
-    fn default() -> Self {
-        Self {
-            legacy_version_file: true,
-            registry: RegistryConfig::default(),
-        }
-    }
+/// Proxy configuration written to `config.yaml`.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default, rename_all = "camelCase")]
+pub struct ProxyConfig {
+    /// Whether the proxy is enabled.
+    pub enable: bool,
+    /// Proxy URL.
+    pub url: String,
+}
+
+/// Storage configuration written to `config.yaml`.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default, rename_all = "camelCase")]
+pub struct StorageConfig {
+    /// Alternative SDK storage root.
+    pub sdk_path: String,
 }
 
 /// Registry configuration written to `config.yaml`.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default, rename_all = "camelCase")]
 pub struct RegistryConfig {
-    /// Optional registry index path or URL.
-    pub source: Option<String>,
+    /// Registry base address or index URL.
+    pub address: String,
+}
+
+/// Legacy version file configuration written to `config.yaml`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct LegacyVersionFileConfig {
+    /// Whether legacy file parsing is enabled.
+    pub enable: bool,
+    /// Legacy parsing strategy.
+    pub strategy: String,
+}
+
+impl Default for LegacyVersionFileConfig {
+    fn default() -> Self {
+        Self {
+            enable: true,
+            strategy: String::from("specified"),
+        }
+    }
+}
+
+/// Cache configuration written to `config.yaml`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct CacheConfig {
+    /// Available hook cache duration string.
+    pub available_hook_duration: String,
+}
+
+impl Default for CacheConfig {
+    fn default() -> Self {
+        Self {
+            available_hook_duration: String::from("12h"),
+        }
+    }
 }
 
 /// Tool versions written in TOML configuration files.

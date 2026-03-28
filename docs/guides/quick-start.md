@@ -20,7 +20,7 @@ cargo build -p vs-cli --no-default-features --features "lua,wasi"
 
 ## 2. Choose a home directory
 
-`vs` uses `~/.vs` by default.
+`vs` uses `~/.vs` by default. Its internal layout is kept close to `vfox`, but the default home path remains `vs`-native.
 
 To override it:
 
@@ -33,15 +33,15 @@ export VS_HOME="$HOME/.vs"
 This repository ships with a local fixture index:
 
 ```bash
-vs config registry.source /absolute/path/to/fixtures/registry/index.json
+vs config registry.address /absolute/path/to/fixtures/registry/index.json
 vs update
 ```
 
-In the current build, `registry.source` is expected to be a local JSON file.
+In the current build, `registry.address` accepts either a registry base address or a direct local index JSON path.
 
-When `vs` is built with the `lua` feature and `registry.source` is unset, `vs update` defaults to the official vfox plugin registry index:
+When `vs` is built with the `lua` feature and `registry.address` is unset, `vs update` defaults to the official vfox plugin registry:
 
-`https://version-fox.github.io/vfox-plugins/index.json`
+`https://version-fox.github.io/vfox-plugins`
 
 If the local registry cache is still empty, commands such as `vs available`, `vs search`, and `vs add <name>` automatically bootstrap the registry index on first use.
 

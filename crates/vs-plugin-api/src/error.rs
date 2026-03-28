@@ -11,6 +11,9 @@ pub enum PluginError {
     /// The requested plugin version is not exposed by the plugin.
     #[error("plugin {plugin} does not expose version {version}")]
     VersionNotFound { plugin: String, version: String },
+    /// The plugin did not provide a result for the requested hook.
+    #[error("plugin did not provide a result")]
+    NoResultProvided,
     /// The backend hit an execution error.
     #[error("plugin backend error: {0}")]
     Backend(String),

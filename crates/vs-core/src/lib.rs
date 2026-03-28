@@ -73,10 +73,13 @@ mod tests {
         write_app_config(
             &home,
             &AppConfig {
-                legacy_version_file: true,
+                proxy: Default::default(),
+                storage: Default::default(),
                 registry: RegistryConfig {
-                    source: Some(registry_path.display().to_string()),
+                    address: registry_path.display().to_string(),
                 },
+                legacy_version_file: Default::default(),
+                cache: Default::default(),
             },
         )?;
 
@@ -105,22 +108,22 @@ mod tests {
         }
         fs::write(
             root.join("metadata.lua"),
-            "return { name = 'nodejs', legacy_filenames = { '.nvmrc' } }",
+            "PLUGIN = {}\nPLUGIN.name = 'nodejs'\nPLUGIN.version = '0.1.0'\nPLUGIN.legacyFilenames = { '.nvmrc' }\n",
         )
         .unwrap_or_else(|error| panic!("failed to write metadata fixture: {error}"));
         fs::write(
             root.join("hooks/available.lua"),
-            "return { { version = '20.11.1' } }",
+            "function PLUGIN:Available(ctx)\n  return { { version = '20.11.1' } }\nend\n",
         )
         .unwrap_or_else(|error| panic!("failed to write available fixture: {error}"));
         fs::write(
             root.join("hooks/pre_install.lua"),
-            "return { ['20.11.1'] = { source = 'packages/20.11.1' } }",
+            "function PLUGIN:PreInstall(ctx)\n  return { version = '20.11.1', url = 'packages/20.11.1' }\nend\n",
         )
         .unwrap_or_else(|error| panic!("failed to write pre_install fixture: {error}"));
         fs::write(
             root.join("hooks/env_keys.lua"),
-            "return { { key = 'NODEJS_HOME', value = '{install_dir}' } }",
+            "function PLUGIN:EnvKeys(ctx)\n  return { { key = 'NODEJS_HOME', value = ctx.path }, { key = 'PATH', value = ctx.path .. '/bin' } }\nend\n",
         )
         .unwrap_or_else(|error| panic!("failed to write env_keys fixture: {error}"));
     }

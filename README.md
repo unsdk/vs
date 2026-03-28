@@ -30,7 +30,7 @@ cargo build -p vs-cli --no-default-features --features wasi
 cargo build -p vs-cli --no-default-features --features "lua,wasi"
 ```
 
-When the `lua` feature is enabled and `registry.source` is unset, `vs` defaults to the official vfox plugin registry index at `https://version-fox.github.io/vfox-plugins/index.json`.
+When the `lua` feature is enabled and `registry.address` is unset, `vs` defaults to the official vfox plugin registry at `https://version-fox.github.io/vfox-plugins`.
 
 ## Workspace crates
 

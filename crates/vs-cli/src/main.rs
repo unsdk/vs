@@ -99,15 +99,24 @@ fn run_with_app(app: App, command: Commands) -> Result<i32> {
             Ok(0)
         }
         Commands::Search(args) => {
-            for entry in app.search_plugins(&args.query)? {
-                println!(
-                    "{} [{}] {}",
-                    entry.name,
-                    backend_label(entry.backend),
-                    entry
-                        .description
-                        .unwrap_or_else(|| String::from("No description"))
-                );
+            for version in app.search_versions(&args.plugin, &args.args)? {
+                let note_suffix = version
+                    .note
+                    .as_deref()
+                    .map(|note| format!(" ({note})"))
+                    .unwrap_or_default();
+                let additions_suffix = if version.additions.is_empty() {
+                    String::new()
+                } else {
+                    let additions = version
+                        .additions
+                        .iter()
+                        .map(|addition| format!("{} {}", addition.name, addition.version))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    format!(" [{additions}]")
+                };
+                println!("{}{}{}", version.version, note_suffix, additions_suffix);
             }
             Ok(0)
         }

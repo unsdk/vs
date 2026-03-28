@@ -13,17 +13,24 @@ anyhow = "1.0.100"
 clap = { version = "4.5.39", features = ["derive", "string", "wrap_help"] }
 clap_complete = "4.5.52"
 dirs = "6.0.0"
+flate2 = "1.1.5"
 miette = { version = "7.6.0", features = ["fancy"] }
 mlua = { version = "0.10.5", features = ["lua54", "serialize", "vendored"] }
+md-5 = "0.10.6"
 reqwest = { version = "0.12.24", default-features = false, features = ["blocking", "json", "rustls-tls"] }
 regex = "1.11.1"
+scraper = "0.24.0"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 serde_yaml = "0.9.34"
+sha1 = "0.10.6"
+sha2 = "0.10.9"
 tempfile = "3.19.1"
+tar = "0.4.44"
 thiserror = "2.0.12"
 toml = "0.8.20"
 walkdir = "2.5.0"
+xz2 = "0.1.7"
 zip = { version = "2.4.2", default-features = false, features = ["deflate"] }
 
 [workspace.lints.rust]

@@ -50,7 +50,7 @@ fn legacy_homes(user_home: &Path, vfox_home: Option<&Path>) -> Vec<PathBuf> {
     if let Some(path) = vfox_home {
         paths.push(path.to_path_buf());
     }
-    paths.push(user_home.join(".vfox"));
     paths.push(user_home.join(".version-fox"));
+    paths.push(user_home.join(".vfox"));
     paths
 }

@@ -1,8 +1,11 @@
 use clap::Args;
 
-/// Searches the available registry index.
+/// Searches available SDK versions for a plugin.
 #[derive(Debug, Args)]
 pub struct SearchArgs {
-    /// Search query.
-    pub query: String,
+    /// Plugin name.
+    pub plugin: String,
+    /// Additional arguments passed through to the plugin.
+    #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+    pub args: Vec<String>,
 }

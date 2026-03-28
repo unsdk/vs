@@ -2,6 +2,7 @@ use vs_plugin_api::PluginBackendKind;
 use vs_registry::RegistryEntry;
 
 use crate::plugin_source::is_remote_source;
+use crate::registry_source::fetch_plugin_manifest;
 use crate::{App, CoreError};
 
 impl App {
@@ -27,7 +28,19 @@ impl App {
                 aliases: Vec::new(),
             }
         } else {
-            self.resolve_registry_entry(name)?
+            let mut entry = self.resolve_registry_entry(name)?;
+            if entry.backend == PluginBackendKind::Lua {
+                let config = self.app_config()?;
+                if !config.registry.address.is_empty() {
+                    if let Ok(manifest) =
+                        fetch_plugin_manifest(&config.registry.address, &entry.name)
+                    {
+                        entry.source = manifest.download_url;
+                        entry.description = manifest.description.or(entry.description);
+                    }
+                }
+            }
+            entry
         };
         let entry = self.materialize_plugin_entry(&entry)?;
 
