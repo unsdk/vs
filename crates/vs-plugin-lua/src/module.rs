@@ -33,7 +33,7 @@ impl UserData for HtmlSelection {
                 .map_err(|error| mlua::Error::external(error.to_string()))?;
             let mut matches = Vec::new();
             for fragment in &this.fragments {
-                let html = Html::parse_fragment(fragment);
+                let html = parse_wrapped_fragment(fragment);
                 for element in html.select(&selector) {
                     matches.push(element.html());
                 }
@@ -47,10 +47,25 @@ impl UserData for HtmlSelection {
                 .map(|fragment| HtmlSelection::new(vec![fragment.clone()]))
                 .unwrap_or_else(|| HtmlSelection::new(Vec::new())))
         });
+        methods.add_method("first", |_, this, ()| {
+            Ok(this
+                .fragments
+                .first()
+                .map(|fragment| HtmlSelection::new(vec![fragment.clone()]))
+                .unwrap_or_else(|| HtmlSelection::new(Vec::new())))
+        });
+        methods.add_method("last", |_, this, ()| {
+            Ok(this
+                .fragments
+                .last()
+                .map(|fragment| HtmlSelection::new(vec![fragment.clone()]))
+                .unwrap_or_else(|| HtmlSelection::new(Vec::new())))
+        });
+        methods.add_method("html", |_, this, ()| Ok(this.fragments.join("")));
         methods.add_method("text", |_, this, ()| {
             let mut result = String::new();
             for fragment in &this.fragments {
-                let html = Html::parse_fragment(fragment);
+                let html = parse_wrapped_fragment(fragment);
                 for text in html.root_element().text() {
                     result.push_str(text);
                 }
@@ -59,7 +74,7 @@ impl UserData for HtmlSelection {
         });
         methods.add_method("attr", |_, this, attribute: String| {
             for fragment in &this.fragments {
-                let html = Html::parse_fragment(fragment);
+                let html = parse_wrapped_fragment(fragment);
                 if let Ok(selector) = Selector::parse("*") {
                     if let Some(element) = html.select(&selector).next() {
                         if let Some(value) = element.value().attr(attribute.as_str()) {
@@ -69,6 +84,14 @@ impl UserData for HtmlSelection {
                 }
             }
             Ok(None::<String>)
+        });
+        methods.add_method("each", |_lua, this, callback: mlua::Function| {
+            for (index, fragment) in this.fragments.iter().enumerate() {
+                callback
+                    .call::<()>((index + 1, HtmlSelection::new(vec![fragment.clone()])))
+                    .map_err(|error| mlua::Error::external(error.to_string()))?;
+            }
+            Ok(Value::Nil)
         });
     }
 }
@@ -389,4 +412,45 @@ fn decompress_archive(archive_path: &Path, destination: &Path) -> Result<(), Str
             .map_err(|error| error.to_string());
     }
     Err(String::from("unsupported archive format"))
+}
+
+fn parse_wrapped_fragment(fragment: &str) -> Html {
+    Html::parse_fragment(&format!("<vs-root>{fragment}</vs-root>"))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::error::Error;
+
+    use mlua::Lua;
+
+    use super::{register_builtin_modules, set_package_paths};
+
+    #[test]
+    fn html_each_should_iterate_matches() -> Result<(), Box<dyn Error>> {
+        let lua = Lua::new();
+        let current_dir = std::env::current_dir()?;
+        set_package_paths(&lua, &current_dir)?;
+        register_builtin_modules(&lua, "vs-test/0.1.0")?;
+
+        lua.load(
+            r#"
+            local html = require("html")
+            local doc = html.parse("<div id='a'>A</div><div id='b'>B</div>")
+            result = {}
+            doc:find("div"):each(function(i, selection)
+              table.insert(result, selection:attr("id"))
+            end)
+            "#,
+        )
+        .exec()?;
+
+        let result: mlua::Table = lua.globals().get("result")?;
+        let first: Option<String> = result.get(1)?;
+        let second: Option<String> = result.get(2)?;
+        assert_eq!(first.as_deref(), Some("a"));
+        assert_eq!(second.as_deref(), Some("b"));
+
+        Ok(())
+    }
 }
