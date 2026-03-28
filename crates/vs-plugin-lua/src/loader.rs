@@ -477,9 +477,8 @@ fn exec_lua_file(lua: &Lua, path: &Path) -> Result<(), PluginError> {
 
 fn runtime_os_type() -> &'static str {
     match std::env::consts::OS {
-        "macos" => "Darwin",
-        "windows" => "Windows",
-        _ => "Linux",
+        "macos" => "darwin",
+        other => other,
     }
 }
 

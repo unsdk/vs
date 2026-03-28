@@ -75,7 +75,7 @@ impl UserData for HtmlSelection {
         methods.add_method("attr", |_, this, attribute: String| {
             for fragment in &this.fragments {
                 let html = parse_wrapped_fragment(fragment);
-                if let Ok(selector) = Selector::parse("*") {
+                if let Ok(selector) = Selector::parse("vs-root > *") {
                     if let Some(element) = html.select(&selector).next() {
                         if let Some(value) = element.value().attr(attribute.as_str()) {
                             return Ok(Some(value.to_string()));
