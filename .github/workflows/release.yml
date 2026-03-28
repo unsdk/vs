@@ -99,6 +99,8 @@ jobs:
     name: Release ${{ matrix.feature.label }} on ${{ matrix.platform.label }}
     needs: prepare-release
     runs-on: ${{ matrix.platform.runner }}
+    env:
+      BUILD_PROFILE: min-size
     strategy:
       fail-fast: false
       matrix:
@@ -157,7 +159,7 @@ jobs:
         if: ${{ matrix.platform.target != '' }}
         run: rustup target add ${{ matrix.platform.target }}
 
-      - name: Build release binary
+      - name: Build minimal binary
         shell: bash
         env:
           BUILD_TARGET: ${{ matrix.platform.target }}
@@ -165,9 +167,9 @@ jobs:
         run: |
           set -euxo pipefail
           if [ -n "$BUILD_TARGET" ]; then
-            cargo build -p vs-cli --release --locked --no-default-features --features "$FEATURE_FLAGS" --target "$BUILD_TARGET"
+            cargo build -p vs-cli --profile "$BUILD_PROFILE" --locked --no-default-features --features "$FEATURE_FLAGS" --target "$BUILD_TARGET"
           else
-            cargo build -p vs-cli --release --locked --no-default-features --features "$FEATURE_FLAGS"
+            cargo build -p vs-cli --profile "$BUILD_PROFILE" --locked --no-default-features --features "$FEATURE_FLAGS"
           fi
 
       - name: Package Unix release asset
@@ -177,15 +179,15 @@ jobs:
           BUILD_TARGET: ${{ matrix.platform.target }}
           VERSION: ${{ needs.prepare-release.outputs.version }}
           PLATFORM_LABEL: ${{ matrix.platform.label }}
-          FEATURE_LABEL: ${{ matrix.feature.label }}
+          ARTIFACT_VARIANT: ${{ matrix.feature.label }}
         run: |
           set -euxo pipefail
           if [ -n "$BUILD_TARGET" ]; then
-            binary_path="target/$BUILD_TARGET/release/vs"
+            binary_path="target/$BUILD_TARGET/$BUILD_PROFILE/vs"
           else
-            binary_path="target/release/vs"
+            binary_path="target/$BUILD_PROFILE/vs"
           fi
-          archive_name="vs-v${VERSION}-${PLATFORM_LABEL}-${FEATURE_LABEL}.tar.gz"
+          archive_name="vs-v${VERSION}-${PLATFORM_LABEL}-${ARTIFACT_VARIANT}.tar.gz"
           staging_dir="$(mktemp -d)"
           cp "$binary_path" "$staging_dir/vs"
           tar -C "$staging_dir" -czf "$archive_name" vs
@@ -198,15 +200,15 @@ jobs:
           BUILD_TARGET: ${{ matrix.platform.target }}
           VERSION: ${{ needs.prepare-release.outputs.version }}
           PLATFORM_LABEL: ${{ matrix.platform.label }}
-          FEATURE_LABEL: ${{ matrix.feature.label }}
+          ARTIFACT_VARIANT: ${{ matrix.feature.label }}
         run: |
           if ($env:BUILD_TARGET -ne "") {
-            $binaryPath = "target\$env:BUILD_TARGET\release\vs.exe"
+            $binaryPath = "target\$env:BUILD_TARGET\$env:BUILD_PROFILE\vs.exe"
           } else {
-            $binaryPath = "target\release\vs.exe"
+            $binaryPath = "target\$env:BUILD_PROFILE\vs.exe"
           }
-          $archiveName = "vs-v$env:VERSION-$env:PLATFORM_LABEL-$env:FEATURE_LABEL.zip"
-          $stagingDir = Join-Path $env:RUNNER_TEMP "vs-release-$env:PLATFORM_LABEL-$env:FEATURE_LABEL"
+          $archiveName = "vs-v$env:VERSION-$env:PLATFORM_LABEL-$env:ARTIFACT_VARIANT.zip"
+          $stagingDir = Join-Path $env:RUNNER_TEMP "vs-release-$env:PLATFORM_LABEL-$env:ARTIFACT_VARIANT"
           New-Item -ItemType Directory -Force -Path $stagingDir | Out-Null
           Copy-Item $binaryPath (Join-Path $stagingDir "vs.exe")
           Compress-Archive -Path (Join-Path $stagingDir "*") -DestinationPath $archiveName -Force
