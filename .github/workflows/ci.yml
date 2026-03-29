@@ -89,7 +89,9 @@ jobs:
 
       - name: Install cross
         if: ${{ matrix.target.builder == 'cross' }}
-        run: cargo install cross --git https://github.com/cross-rs/cross
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
 
       - name: Add Rust target
         run: rustup target add ${{ matrix.target.target }}
