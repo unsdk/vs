@@ -179,11 +179,7 @@ impl Installer {
                 if let Some(checksum) = artifact.checksum.as_ref() {
                     verify_checksum(temp_file.path(), checksum)?;
                 }
-                self.install_from_download(
-                    &temp_file.path().display().to_string(),
-                    &bytes,
-                    &target_path,
-                )?;
+                self.install_from_download(url, &bytes, &target_path)?;
             }
         }
 
@@ -411,7 +407,10 @@ fn extract_zip(bytes: &[u8], target_path: &Path) -> Result<(), InstallerError> {
         let Some(relative_path) = file.enclosed_name() else {
             continue;
         };
-        let output_path = target_path.join(relative_path);
+        let Some(stripped_path) = strip_archive_root(&relative_path) else {
+            continue;
+        };
+        let output_path = target_path.join(stripped_path);
         if file.name().ends_with('/') {
             fs::create_dir_all(&output_path)?;
             continue;
@@ -428,22 +427,49 @@ fn extract_zip(bytes: &[u8], target_path: &Path) -> Result<(), InstallerError> {
 fn extract_tar(bytes: &[u8], target_path: &Path) -> Result<(), InstallerError> {
     println!("Unpacking {}...", target_path.display());
     fs::create_dir_all(target_path)?;
-    let mut archive = Archive::new(Cursor::new(bytes));
-    archive.unpack(target_path).map_err(InstallerError::from)
+    extract_tar_archive(Archive::new(Cursor::new(bytes)), target_path)
 }
 
 fn extract_tar_gz(bytes: &[u8], target_path: &Path) -> Result<(), InstallerError> {
     println!("Unpacking {}...", target_path.display());
     fs::create_dir_all(target_path)?;
     let decoder = flate2::read::GzDecoder::new(Cursor::new(bytes));
-    let mut archive = Archive::new(decoder);
-    archive.unpack(target_path).map_err(InstallerError::from)
+    extract_tar_archive(Archive::new(decoder), target_path)
 }
 
 fn extract_tar_xz(bytes: &[u8], target_path: &Path) -> Result<(), InstallerError> {
     println!("Unpacking {}...", target_path.display());
     fs::create_dir_all(target_path)?;
     let decoder = XzDecoder::new(Cursor::new(bytes));
-    let mut archive = Archive::new(decoder);
-    archive.unpack(target_path).map_err(InstallerError::from)
+    extract_tar_archive(Archive::new(decoder), target_path)
+}
+
+fn extract_tar_archive<R: Read>(
+    mut archive: Archive<R>,
+    target_path: &Path,
+) -> Result<(), InstallerError> {
+    for entry in archive.entries()? {
+        let mut entry = entry?;
+        let path = entry.path()?;
+        let Some(stripped_path) = strip_archive_root(&path) else {
+            continue;
+        };
+        let output_path = target_path.join(stripped_path);
+        if let Some(parent) = output_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        entry.unpack(output_path)?;
+    }
+    Ok(())
+}
+
+fn strip_archive_root(path: &Path) -> Option<PathBuf> {
+    let mut components = path.components();
+    components.next()?;
+    let stripped = components.as_path();
+    if stripped.as_os_str().is_empty() {
+        None
+    } else {
+        Some(stripped.to_path_buf())
+    }
 }
