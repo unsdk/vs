@@ -1,0 +1,9 @@
+{
+  "title": "Plugins",
+  "pages": [
+    "index",
+    "overview",
+    "lua-plugins",
+    "native-plugins"
+  ]
+}

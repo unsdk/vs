@@ -1,0 +1,46 @@
+---
+title: Migration
+description: Copy compatible state from an existing home into the active vs home.
+---
+
+`vs migrate` copies compatible data from another home into the active `vs` layout.
+
+## What gets copied
+
+The current implementation copies these roots when they exist:
+
+- `config.yaml`
+- `global/`
+- `registry/`
+- `plugins/`
+- `cache/`
+
+## Recommended command
+
+In the current codebase, the reliable path is to pass a source directory explicitly:
+
+```bash
+vs migrate --source ~/.vfox
+```
+
+The command copies data into the active home selected by `VS_HOME` or `~/.vs`.
+
+## After migration
+
+Check the imported state:
+
+```bash
+vs current
+vs available
+vs list
+```
+
+## Notes
+
+- Migration copies data; it does not rename or remove the source home.
+- Running the command again copies the same compatible roots into the active target.
+- If you want a completely fresh import, clean the target home before running migration again.
+
+<Callout type="info" title="Why the docs recommend --source">
+  The internal data model already has room for migration candidates, but the current home-resolution implementation does not auto-populate legacy homes. Passing `--source` keeps the workflow explicit and accurate.
+</Callout>

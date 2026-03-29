@@ -1,0 +1,10 @@
+{
+  "title": "Reference",
+  "pages": [
+    "index",
+    "cli-commands",
+    "shell-activation",
+    "shims-and-path",
+    "legacy-version-files"
+  ]
+}

@@ -1,0 +1,97 @@
+---
+title: Lua Plugins
+description: The hook-based plugin model used by the current Lua backend.
+---
+
+The Lua runtime is implemented in `vs-plugin-lua` and reads a plugin directory with a small hook-based layout.
+
+## Directory structure
+
+```text
+my-plugin/
+  metadata.lua
+  hooks/
+    available.lua
+    pre_install.lua
+    env_keys.lua
+    pre_use.lua
+  packages/
+    1.0.0/
+      bin/
+```
+
+The `pre_use.lua` hook is optional, but current `vs` builds support it for aliasing version requests such as `lts` to an installed runtime.
+
+## `metadata.lua`
+
+A fixture-style metadata file looks like this:
+
+```lua
+PLUGIN = {}
+PLUGIN.name = "nodejs"
+PLUGIN.version = "0.1.0"
+PLUGIN.description = "Fixture Node.js plugin"
+PLUGIN.homepage = "https://github.com/version-fox/vfox-nodejs"
+PLUGIN.legacyFilenames = { ".nvmrc", ".node-version" }
+```
+
+## `hooks/available.lua`
+
+Return the versions the plugin exposes:
+
+```lua
+function PLUGIN:Available(ctx)
+  return {
+    { version = "20.11.1", note = "Current fixture release" },
+    { version = "18.19.0", note = "LTS fixture release" },
+  }
+end
+```
+
+## `hooks/pre_install.lua`
+
+Return installation metadata for the requested version:
+
+```lua
+function PLUGIN:PreInstall(ctx)
+  if ctx.version == "20.11.1" then
+    return {
+      version = "20.11.1",
+      url = "packages/20.11.1",
+    }
+  end
+end
+```
+
+## `hooks/env_keys.lua`
+
+Emit environment keys for the installed runtime:
+
+```lua
+function PLUGIN:EnvKeys(ctx)
+  return {
+    { key = "NODEJS_HOME", value = ctx.path },
+    { key = "PATH", value = ctx.path .. "/bin" },
+  }
+end
+```
+
+## `hooks/pre_use.lua`
+
+Optionally resolve a requested alias before activation:
+
+```lua
+function PLUGIN:PreUse(ctx)
+  if ctx.version == "lts" then
+    return { version = "20.11.1" }
+  end
+
+  return { version = ctx.version }
+end
+```
+
+## Notes
+
+- The current runtime stays intentionally small and fixture-friendly.
+- The loader accepts common metadata naming styles such as `legacyFilenames` and `legacy_filenames`.
+- Hook results are converted into typed Rust structures before the rest of the workspace uses them.

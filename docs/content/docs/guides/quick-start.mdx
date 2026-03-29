@@ -1,0 +1,126 @@
+---
+title: Quick Start
+description: Build the CLI locally, configure a home, add a plugin, install a version, and activate your shell.
+---
+
+This guide walks through the fastest local path from a clean checkout to a working `vs` setup.
+
+## 1. Build the CLI
+
+During development, build the default CLI binary from the workspace root:
+
+```bash
+cargo build -p vs-cli
+```
+
+The resulting binary is written to `target/debug/vs`.
+
+Backend-specific builds are also supported:
+
+```bash
+cargo build -p vs-cli --no-default-features --features lua
+cargo build -p vs-cli --no-default-features --features wasi
+cargo build -p vs-cli --no-default-features --features full
+```
+
+For smaller distributable binaries, the workspace also exposes a size-focused profile:
+
+```bash
+cargo build -p vs-cli --profile min-size --no-default-features
+cargo build -p vs-cli --profile min-size --no-default-features --features lua
+cargo build -p vs-cli --profile min-size --no-default-features --features wasi
+```
+
+## 2. Choose the active home
+
+The current implementation resolves the active home in this order:
+
+1. `VS_HOME`, when it is set
+2. otherwise `~/.vs`
+
+Example:
+
+```bash
+export VS_HOME="$HOME/.vs"
+```
+
+## 3. Point `vs` at a registry source
+
+For local development, the repository ships a fixture registry index:
+
+```bash
+vs config registry.address /absolute/path/to/fixtures/registry/index.json
+vs update
+```
+
+In current builds, `registry.address` accepts either a registry base URL or a direct local `index.json` path.
+
+When `vs` is built with the `lua` feature and `registry.address` is unset, `vs` falls back to the official vfox plugin registry:
+
+```text
+https://version-fox.github.io/vfox-plugins
+```
+
+Commands that need registry metadata, such as `vs available`, `vs search`, and `vs add <name>`, refresh the cached index automatically when a registry source is configured.
+
+## 4. Add a plugin
+
+Add a plugin from the registry:
+
+```bash
+vs add nodejs
+```
+
+Or add one directly from a source directory:
+
+```bash
+vs add nodejs --source /absolute/path/to/plugin --backend lua
+```
+
+## 5. Install and activate a runtime
+
+Install a specific version:
+
+```bash
+vs install nodejs@20.11.1
+```
+
+Activate it globally:
+
+```bash
+vs use nodejs@20.11.1 -g
+```
+
+Check the active version:
+
+```bash
+vs current nodejs
+```
+
+## 6. Run a command through the resolved environment
+
+```bash
+vs exec nodejs node -v
+```
+
+This works even before shell activation.
+
+## 7. Enable shell activation
+
+Example for Bash:
+
+```bash
+eval "$(vs activate bash)"
+```
+
+Once activation is loaded, `vs` can react to directory changes and apply the currently resolved tool versions to the shell session.
+
+<Callout type="info" title="Project, session, and global scopes">
+  `vs use` defaults to session scope when you do not pass `-g`, `-p`, or `-s`. Use the explicit flags when you want a persistent global or project pin.
+</Callout>
+
+## Where to go next
+
+- Read [Configuration](./configuration) for file locations and precedence rules.
+- Keep [CLI Commands](../reference/cli-commands) nearby while you are exploring the command surface.
+- Review [Shell Activation](../reference/shell-activation) if you want shell-specific setup examples.

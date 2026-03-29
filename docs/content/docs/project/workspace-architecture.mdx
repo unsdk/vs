@@ -1,0 +1,40 @@
+---
+title: Workspace Architecture
+description: Crate boundaries, dependency direction, and file-organization rules in the vs workspace.
+---
+
+The `vs` repository is intentionally split into focused crates so command logic, storage concerns, and plugin runtimes stay decoupled.
+
+## Crates
+
+- `vs-cli`: binary, argument parsing, completions, TUI/output, and the `vs` executable
+- `vs-core`: orchestration and command use cases
+- `vs-config`: home detection, config files, project files, legacy files, and version resolution
+- `vs-registry`: registry index and local plugin entries
+- `vs-installer`: transactional install staging and receipts
+- `vs-plugin-api`: shared plugin models and traits
+- `vs-plugin-lua`: Lua plugin backend
+- `vs-plugin-wasi`: native plugin contract layer
+- `vs-plugin-sdk`: author-facing helpers for native plugins
+- `vs-shell`: activation scripts, links, and path helpers
+- `vs-test-support`: fixtures and temp helpers
+
+## Dependency flow
+
+The intended direction is:
+
+1. focused leaf crates such as `vs-config`, `vs-registry`, `vs-installer`, `vs-shell`, and the plugin crates
+2. `vs-core`, which composes those leaves into user-facing services
+3. `vs-cli`, which depends on `vs-core`
+
+## File-size discipline
+
+The workspace prefers many small modules over a few oversized files.
+
+- one command per file in `crates/vs-cli/src/command/`
+- one use case per file in `crates/vs-core/src/service/`
+- separate models, loaders, stores, and helpers in leaf crates
+
+## Why this matters
+
+This structure keeps the CLI thin, makes service logic testable without terminal concerns, and lets plugin/runtime work evolve without collapsing the workspace into a single large crate.

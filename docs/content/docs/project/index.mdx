@@ -1,0 +1,50 @@
+---
+title: Project Overview
+description: A high-level map of the workspace, crate responsibilities, and feature model behind vs.
+---
+
+`vs` is organized as a Rust 2024 workspace with a small CLI binary on top of focused supporting crates.
+
+## What the repository includes
+
+- an English-only CLI named `vs`
+- config resolution for project files and compatibility files
+- a local registry model and plugin materialization flow
+- transactional local installs
+- scope-aware `use`, `current`, `list`, `exec`, `activate`, and `migrate` flows
+- Lua and native plugin backends behind compile-time features
+
+## Core crates at a glance
+
+| Crate | Responsibility |
+| --- | --- |
+| `vs-cli` | Binary entrypoint, clap-based command parsing, TUI/output, completions, and shell-facing UX. |
+| `vs-core` | Orchestration layer that composes config, registry, installer, shell, and plugin services. |
+| `vs-config` | Home resolution, config files, project files, legacy files, and version precedence. |
+| `vs-registry` | Cached registry metadata and locally added plugin entries. |
+| `vs-installer` | Transactional runtime installs, staging, promotion, and uninstall flows. |
+| `vs-shell` | Shell activation scripts, canonical path helpers, and symlink management. |
+| `vs-plugin-*` crates | Shared plugin API plus concrete Lua and native implementations. |
+| `vs-test-support` | Shared helpers and fixtures for integration tests. |
+
+## Feature flags
+
+The CLI is commonly built with one of these backend configurations:
+
+- `lua`
+- `wasi`
+- `full`
+
+The chosen feature set affects which plugin backends the binary accepts at runtime.
+
+## Repository support files
+
+The workspace also ships:
+
+- `fixtures/` for registry and plugin examples
+- `docs/` for this static documentation site
+- `.github/workflows/` for CI, release, and Pages deployment automation
+
+## Next step
+
+Continue to [Workspace Architecture](./workspace-architecture) for a more detailed breakdown of how the crates depend on each other and how code is organized inside the workspace.

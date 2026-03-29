@@ -1,0 +1,54 @@
+---
+title: Shell Activation
+description: Load shell hooks so vs can apply the active runtime selection to your session.
+---
+
+`vs activate <shell>` prints shell code that wires your shell to the internal helper commands.
+
+## Bash
+
+```bash
+eval "$(vs activate bash)"
+```
+
+## Zsh
+
+```zsh
+eval "$(vs activate zsh)"
+```
+
+## Fish
+
+```fish
+vs activate fish | source
+```
+
+## Nushell
+
+```nu
+vs activate nushell | save --force ~/.config/nushell/vs.nu
+source ~/.config/nushell/vs.nu
+```
+
+## PowerShell
+
+```powershell
+Invoke-Expression (& vs activate pwsh)
+```
+
+## Clink
+
+```bat
+for /f "delims=" %i in ('vs activate clink') do %i
+```
+
+## What activation does
+
+Current activation scripts set or reuse `VS_SESSION_ID`, then delegate to internal helper commands so `vs` can compute environment changes for the current working directory.
+
+Internal helpers currently include:
+
+- `vs __hook-env <shell>`
+- `vs __resolve <plugin>`
+
+Treat these helpers as internal implementation details rather than stable public commands.

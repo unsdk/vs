@@ -1,0 +1,179 @@
+---
+title: CLI Commands
+description: A practical reference for the current vs command surface.
+---
+
+This page summarizes the commands exposed by `vs-cli` today.
+
+## Registry and plugin discovery
+
+### `vs update`
+
+Refresh the searchable plugin index from the configured registry source:
+
+```bash
+vs update
+vs update nodejs
+vs update --all
+```
+
+- `vs update` with no arguments refreshes the registry index.
+- `vs update <plugin>` refreshes one locally added plugin.
+- `vs update --all` refreshes all locally added plugins.
+
+### `vs available`
+
+List plugins from the cached registry index:
+
+```bash
+vs available
+```
+
+### `vs search`
+
+List available versions for a plugin:
+
+```bash
+vs search nodejs
+vs search nodejs -- --lts
+```
+
+Additional trailing arguments are passed through to the plugin backend.
+
+### `vs add` and `vs remove`
+
+Add a plugin from the registry:
+
+```bash
+vs add nodejs
+```
+
+Add a plugin directly from a source directory or URL:
+
+```bash
+vs add deno --source /path/to/plugin --backend wasi
+vs add nodejs --source /path/to/plugin --backend lua --alias node
+```
+
+Remove a locally added plugin entry:
+
+```bash
+vs remove nodejs
+```
+
+## Install, activate, and inspect runtimes
+
+### `vs install`
+
+Install explicit tool specs:
+
+```bash
+vs install nodejs@20.11.1
+vs install nodejs deno@1.40.5
+```
+
+Install all tools currently configured for the working context:
+
+```bash
+vs install --all
+```
+
+When you omit the version and use `plugin` only, the current implementation chooses the first version returned by the plugin backend.
+
+### `vs uninstall`
+
+```bash
+vs uninstall nodejs@20.11.1
+```
+
+### `vs use`
+
+Activate an already installed runtime:
+
+```bash
+vs use nodejs@20.11.1 -g
+vs use nodejs@20.11.1 -p
+VS_SESSION_ID=my-shell vs use nodejs@20.11.1 -s
+```
+
+Important details:
+
+- `vs use` only activates installed versions.
+- If you omit a scope flag, `vs use` defaults to **session** scope.
+- In interactive terminals, `vs use nodejs` can prompt you to choose from installed versions.
+- In non-interactive environments, `vs use` requires an explicit version.
+
+Project scope can skip the `.vs/sdks/<plugin>` link while still writing `.vs.toml`:
+
+```bash
+vs use deno@1.40.5 -p --unlink
+```
+
+### `vs unuse`
+
+Remove an active version assignment:
+
+```bash
+vs unuse nodejs -g
+vs unuse nodejs -p
+vs unuse nodejs -s
+```
+
+Like `vs use`, `vs unuse` defaults to session scope when no explicit scope flag is provided.
+
+### Inspection commands
+
+```bash
+vs current
+vs current nodejs
+vs list
+vs list nodejs
+vs info nodejs
+vs info nodejs@20.11.1
+vs cd
+vs cd nodejs
+vs cd nodejs --plugin
+```
+
+Notes:
+
+- `vs info` supports `-f/--format` for placeholder-based output formatting.
+- `vs cd` prints a path in non-interactive mode and can open an interactive shell when a TTY UI is available.
+- `vs cd nodejs --plugin` resolves the plugin source directory instead of the active runtime directory.
+
+## Shell and execution helpers
+
+Generate activation scripts:
+
+```bash
+vs activate bash
+vs activate zsh
+```
+
+Generate completions:
+
+```bash
+vs completion bash
+```
+
+Execute a command with the resolved environment:
+
+```bash
+vs exec nodejs node -v
+vs exec nodejs@20.11.1 node -v
+```
+
+## Config, migration, and self-upgrade
+
+```bash
+vs config --list
+vs config registry.address /absolute/path/to/index.json
+vs config --unset registry.address
+vs migrate --source ~/.vfox
+vs upgrade
+vs upgrade --yes
+```
+
+<Callout type="warning" title="`vs upgrade` is self-upgrade">
+  `vs upgrade` checks GitHub releases for `unsdk/vs`, compares the running version with the latest published tag, downloads the matching archive for the current OS, architecture, and compiled feature set, and replaces the running binary. It does **not** upgrade an installed plugin.
+</Callout>

@@ -1,0 +1,12 @@
+{
+  "title": "Documentation",
+  "description": "Product documentation for vs",
+  "root": true,
+  "pages": [
+    "index",
+    "guides",
+    "reference",
+    "plugins",
+    "project"
+  ]
+}

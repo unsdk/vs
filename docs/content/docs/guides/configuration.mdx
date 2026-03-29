@@ -1,0 +1,121 @@
+---
+title: Configuration
+description: Learn where vs stores config, which files it reads, and how it resolves active versions.
+---
+
+`vs` reads configuration from the active home, project-level version files, and optional compatibility files.
+
+## Active home
+
+The current home resolution logic is intentionally simple:
+
+- `VS_HOME`, when set
+- otherwise `~/.vs`
+
+The main config file lives at:
+
+```text
+$VS_HOME/config.yaml
+```
+
+## Config keys exposed today
+
+The current CLI exposes these keys through `vs config`:
+
+| Key | Meaning today |
+| --- | --- |
+| `registry.address` | Active registry source. This is the key most users will configure immediately. |
+| `proxy.enable` | Persisted in config, but current command flows do not yet apply a dedicated proxy layer. |
+| `proxy.url` | Persisted alongside `proxy.enable`. |
+| `storage.sdkPath` | Present in the config model for future storage customization. |
+| `legacyVersionFile.enable` | Present in the config model; current generic legacy-file resolution is still built into `vs-config`. |
+| `legacyVersionFile.strategy` | Persisted strategy string in the current config model. |
+| `cache.availableHookDuration` | Stored in config for future caching policy work. |
+
+Example configuration:
+
+```yaml
+proxy:
+  enable: false
+  url: ""
+storage:
+  sdkPath: ""
+registry:
+  address: /absolute/path/to/fixtures/registry/index.json
+legacyVersionFile:
+  enable: true
+  strategy: specified
+cache:
+  availableHookDuration: 12h
+```
+
+## Tool version files
+
+When `vs` looks for a project-level tool map, it walks upward from the current directory and checks files in this order:
+
+1. `.vs.toml`
+2. `vs.toml`
+3. `.vfox.toml`
+4. `vfox.toml`
+
+Format:
+
+```toml
+[tools]
+nodejs = "20.11.1"
+deno = "1.40.5"
+```
+
+The preferred write target for project scope is always `.vs.toml`.
+
+## Supported generic legacy files
+
+The current generic resolver also checks these compatibility files:
+
+- `.tool-versions`
+- `.nvmrc`
+- `.node-version`
+- `.sdkmanrc`
+
+Their exact parsing behavior is documented in [Legacy Version Files](../reference/legacy-version-files).
+
+## Resolution precedence
+
+For managed versions, the current resolver checks sources in this order:
+
+1. project TOML file (`.vs.toml`, `vs.toml`, `.vfox.toml`, `vfox.toml`)
+2. nearest supported generic legacy file
+3. session state (`$VS_HOME/sessions/<id>.toml`)
+4. global state (`$VS_HOME/global/tools.toml`)
+
+If none of those sources resolve a tool, `vs` simply has no managed version selected for that plugin.
+
+## Config commands
+
+List current values:
+
+```bash
+vs config --list
+```
+
+Read a single value:
+
+```bash
+vs config registry.address
+```
+
+Set a value:
+
+```bash
+vs config registry.address /absolute/path/to/index.json
+```
+
+Unset a value:
+
+```bash
+vs config --unset registry.address
+```
+
+<Callout type="warning" title="About legacy-version settings">
+  The config model already includes `legacyVersionFile.*` keys, but the current generic file lookup is still implemented directly inside `vs-config`. Treat those keys as forward-looking rather than as a complete runtime toggle.
+</Callout>

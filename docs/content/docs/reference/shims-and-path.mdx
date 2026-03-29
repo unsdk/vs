@@ -1,0 +1,64 @@
+---
+title: Shims and PATH
+description: Understand where runtimes live on disk and how vs builds an execution environment.
+---
+
+`vs` manages runtime resolution through install directories, optional links, and PATH updates.
+
+## Home layout
+
+The shell crate models these top-level directories inside `$VS_HOME`:
+
+- `registry/`
+- `plugins/`
+- `cache/`
+- `shims/`
+- `sessions/`
+- `global/`
+
+## Installed runtimes
+
+Installed runtime trees live under:
+
+```text
+$VS_HOME/cache/<plugin>/versions/<version>
+```
+
+## Current links
+
+Global scope uses a `current` link when a version is activated globally:
+
+```text
+$VS_HOME/cache/<plugin>/current
+```
+
+Project scope can create a project-local link:
+
+```text
+<project>/.vs/sdks/<plugin>
+```
+
+If you activate project scope with `--unlink`, `vs` still records the version in `.vs.toml`, but it skips the project-local symlink.
+
+## PATH behavior
+
+When `vs` prepares an execution environment, it prepends each active runtime `bin/` directory ahead of the inherited PATH.
+
+In practice, the precedence is:
+
+1. project-selected runtime
+2. session-selected runtime
+3. global-selected runtime
+4. existing system PATH
+
+## About shims
+
+The home layout includes a `shims/` directory, but the current implementation is primarily link- and PATH-based. In other words, the active runtime experience today is driven by selected install directories and shell updates rather than by a generated shim layer.
+
+## Direct execution
+
+Shell activation is optional when you just want to run a command through a resolved runtime:
+
+```bash
+vs exec nodejs node -v
+```

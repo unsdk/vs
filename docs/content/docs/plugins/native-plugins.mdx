@@ -1,0 +1,51 @@
+---
+title: Native Plugins
+description: The typed descriptor model used by the current native plugin backend.
+---
+
+The current native plugin layer is implemented by `vs-plugin-wasi`.
+
+## Current model
+
+Today, the runtime uses a typed descriptor backed by `component.toml` plus a versioned WIT contract stored at:
+
+```text
+crates/vs-plugin-wasi/wit/vs-plugin.wit
+```
+
+## Descriptor layout
+
+```toml
+[plugin]
+name = "deno"
+description = "Fixture native plugin"
+aliases = ["denojs"]
+legacy_filenames = [".deno-version"]
+
+[[versions]]
+version = "1.40.5"
+source = "packages/1.40.5"
+note = "Current fixture release"
+
+[[env]]
+key = "DENO_HOME"
+value = "{install_dir}"
+
+[[env]]
+key = "VS_DENO_HOME"
+value = "{install_dir}"
+```
+
+## What the runtime reads
+
+The current descriptor runtime loads:
+
+- static plugin metadata
+- available versions
+- installation source paths
+- environment key templates
+- plugin-specific legacy filenames
+
+## Design direction
+
+The native plugin contract is intentionally explicit. The typed descriptor model keeps today's implementation easy to test while leaving room for a fuller component-hosting model later, without changing the rest of the workspace API.

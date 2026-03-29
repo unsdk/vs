@@ -1,0 +1,44 @@
+---
+title: Plugin Overview
+description: Understand the shared lifecycle and backend split for plugins in vs.
+---
+
+`vs` supports two backend families:
+
+- **Lua plugins** for small, scriptable hook-based integrations
+- **Native plugins** for typed descriptor-based integrations backed by `vs-plugin-wasi`
+
+## Shared capabilities
+
+Both plugin tracks expose the same conceptual lifecycle to the rest of the workspace:
+
+- list available versions
+- describe how to install a selected version
+- emit environment keys for an installed runtime
+- expose manifest metadata
+- optionally parse legacy version file contents
+
+## Backend gating
+
+Backend support is compile-time gated. A build only accepts plugin backends that were compiled into the current binary.
+
+Common configurations are:
+
+- `--features lua`
+- `--features wasi`
+- `--features full`
+
+If you add a plugin whose backend is not available in the current build, `vs` returns an explicit unsupported-backend error.
+
+## Sources
+
+Plugins can come from:
+
+- the configured registry source
+- an explicit local directory
+- a remote source materialized into the local plugin store
+
+## Read next
+
+- [Lua Plugins](./lua-plugins)
+- [Native Plugins](./native-plugins)

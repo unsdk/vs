@@ -1,0 +1,49 @@
+---
+title: Documentation Overview
+description: Start here for installation flows, CLI behavior, plugin concepts, and workspace details.
+---
+
+`vs` is a Rust workspace for a cross-platform runtime version manager inspired by `vfox`.
+
+This documentation is organized around practical workflows:
+
+<Cards>
+  <Card
+    title="Guides"
+    href="./guides"
+    description="Walk through first-run setup, configuration, and migration from older homes."
+  />
+  <Card
+    title="Reference"
+    href="./reference"
+    description="Understand the command surface, shell activation, PATH planning, and compatibility files."
+  />
+  <Card
+    title="Plugins"
+    href="./plugins"
+    description="Compare the Lua and native plugin tracks and see how both expose the same lifecycle."
+  />
+  <Card
+    title="Project"
+    href="./project"
+    description="Review the workspace structure, crate responsibilities, and implementation boundaries."
+  />
+</Cards>
+
+<Callout type="info" title="What this site assumes">
+  Examples use the current repository layout and command surface from `vs-cli`. When a page discusses a behavior that is still evolving, it is called out explicitly.
+</Callout>
+
+## Recommended path
+
+1. Read [Quick Start](./guides/quick-start) to build the CLI and activate your first tool.
+2. Review [Configuration](./guides/configuration) to understand home paths, config files, and precedence.
+3. Keep [CLI Commands](./reference/cli-commands) open while working with the tool.
+4. Dive into [Plugins](./plugins/overview) and [Project Overview](./project) if you plan to extend `vs`.
+
+## What makes `vs` different
+
+- A multi-crate Rust workspace with explicit boundaries between CLI, orchestration, config, registry, installer, plugins, and shell integration.
+- Compile-time backend selection for Lua plugins, native WASI-style plugins, or both.
+- Scope-aware version activation for projects, sessions, and global use.
+- A docs site that maps directly to the current repository implementation instead of a generic scaffold.

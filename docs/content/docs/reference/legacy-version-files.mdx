@@ -1,0 +1,42 @@
+---
+title: Legacy Version Files
+description: Compatibility files currently supported by the generic project resolver.
+---
+
+`vs-config` currently supports a small set of generic legacy version files.
+
+## Supported files
+
+- `.tool-versions`
+- `.nvmrc`
+- `.node-version`
+- `.sdkmanrc`
+
+## Parsing behavior
+
+`.tool-versions`
+
+```text
+nodejs 20.11.1
+java 21-tem
+```
+
+`.nvmrc`
+
+```text
+20.11.1
+```
+
+`.sdkmanrc`
+
+```text
+java=21-tem
+```
+
+## Precedence with `.vs.toml`
+
+Project TOML files take precedence over these compatibility files. The resolver checks TOML files first, then falls back to the nearest supported generic legacy file.
+
+<Callout type="info" title="Plugin manifests can describe additional legacy filenames">
+  Both plugin backends expose `legacy_filenames` metadata, but the current generic project resolver only auto-detects the built-in set listed above. Treat plugin-specific legacy parsing as backend capability, not as a replacement for the generic resolver.
+</Callout>
