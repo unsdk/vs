@@ -55,11 +55,7 @@ fn cli_should_run_registry_install_use_and_exec_flow() -> Result<(), Box<dyn std
     assert!(
         output_text(&run(&home, &project, &["exec", "nodejs", "node"])).contains("nodejs 20.11.1")
     );
-    assert_success(run(
-        &home,
-        &project,
-        &["exec", "nodejs@20.11.1", "node"],
-    ));
+    assert_success(run(&home, &project, &["exec", "nodejs@20.11.1", "node"]));
     assert!(
         output_text(&run(&home, &project, &["exec", "nodejs@20.11.1", "node"]))
             .contains("nodejs 20.11.1")

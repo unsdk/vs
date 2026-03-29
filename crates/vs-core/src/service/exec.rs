@@ -23,13 +23,12 @@ impl App {
         delta.path_entries.push(bin_dir(runtime.main_path()));
         apply_exec_env_keys(&mut delta, plugin.env_keys(&runtime)?);
         let path_value = self.path_with_delta(&delta)?;
-        let resolved_command = resolve_command_path(command, &delta.path_entries)
-            .ok_or_else(|| CoreError::CommandExecution {
-                command: command.to_string(),
-                message: format!(
-                    "command not found in {} environment",
-                    runtime.plugin
-                ),
+        let resolved_command =
+            resolve_command_path(command, &delta.path_entries).ok_or_else(|| {
+                CoreError::CommandExecution {
+                    command: command.to_string(),
+                    message: format!("command not found in {} environment", runtime.plugin),
+                }
             })?;
 
         let mut child = Command::new(resolved_command);
