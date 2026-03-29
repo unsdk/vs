@@ -4,6 +4,10 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Shared test helpers for the vs workspace."
+readme = "README.md"
 
 [dependencies]
 tempfile.workspace = true

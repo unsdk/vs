@@ -4,6 +4,10 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Transactional runtime installer for the vs version manager."
+readme = "README.md"
 
 [dependencies]
 flate2.workspace = true
@@ -17,7 +21,7 @@ sha2.workspace = true
 tar.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true
-vs-plugin-api = { path = "../vs-plugin-api" }
+vs-plugin-api.workspace = true
 walkdir.workspace = true
 xz2.workspace = true
 zip.workspace = true

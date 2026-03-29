@@ -4,10 +4,14 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "SDK helpers for building vs native plugins."
+readme = "README.md"
 
 [dependencies]
 serde.workspace = true
-vs-plugin-api = { path = "../vs-plugin-api" }
+vs-plugin-api.workspace = true
 
 [lints]
 workspace = true

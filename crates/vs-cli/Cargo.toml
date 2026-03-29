@@ -4,6 +4,10 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Command-line interface for the vs version manager."
+readme = "README.md"
 
 [features]
 default = ["lua", "wasi"]
@@ -19,14 +23,14 @@ anyhow.workspace = true
 clap.workspace = true
 clap_complete.workspace = true
 dialoguer.workspace = true
-vs-config = { path = "../vs-config" }
-vs-core = { path = "../vs-core", default-features = false }
-vs-plugin-api = { path = "../vs-plugin-api" }
-vs-registry = { path = "../vs-registry" }
+vs-config.workspace = true
+vs-core.workspace = true
+vs-plugin-api.workspace = true
+vs-registry.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
-vs-test-support = { path = "../vs-test-support" }
+vs-test-support.workspace = true
 
 [lints]
 workspace = true

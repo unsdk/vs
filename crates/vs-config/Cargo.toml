@@ -4,6 +4,10 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Config and home resolution utilities for the vs runtime manager."
+readme = "README.md"
 
 [dependencies]
 dirs.workspace = true

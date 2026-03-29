@@ -4,12 +4,16 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "WASI-backed plugin runtime for the vs version manager."
+readme = "README.md"
 
 [dependencies]
 serde.workspace = true
 thiserror.workspace = true
 toml.workspace = true
-vs-plugin-api = { path = "../vs-plugin-api" }
+vs-plugin-api.workspace = true
 
 [lints]
 workspace = true

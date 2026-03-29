@@ -4,6 +4,10 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Core orchestration services for the vs version manager."
+readme = "README.md"
 
 [features]
 default = ["lua", "wasi"]
@@ -20,13 +24,13 @@ serde_yaml.workspace = true
 tar.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true
-vs-config = { path = "../vs-config" }
-vs-installer = { path = "../vs-installer" }
-vs-plugin-api = { path = "../vs-plugin-api" }
-vs-plugin-lua = { path = "../vs-plugin-lua", optional = true }
-vs-plugin-wasi = { path = "../vs-plugin-wasi", optional = true }
-vs-registry = { path = "../vs-registry" }
-vs-shell = { path = "../vs-shell" }
+vs-config.workspace = true
+vs-installer.workspace = true
+vs-plugin-api.workspace = true
+vs-plugin-lua = { workspace = true, optional = true }
+vs-plugin-wasi = { workspace = true, optional = true }
+vs-registry.workspace = true
+vs-shell.workspace = true
 walkdir.workspace = true
 zip.workspace = true
 
