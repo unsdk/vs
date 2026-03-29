@@ -16,4 +16,15 @@ impl App {
             installed_versions,
         })
     }
+
+    /// Returns the installed runtime path for a specific plugin version.
+    pub fn plugin_runtime_path(
+        &self,
+        plugin_name: &str,
+        version: &str,
+    ) -> Result<Option<std::path::PathBuf>, CoreError> {
+        Ok(self
+            .load_installed_runtime(plugin_name, version)?
+            .map(|runtime| runtime.main.path))
+    }
 }

@@ -32,4 +32,21 @@ impl App {
             install_dir: runtime.root_dir,
         })
     }
+
+    /// Returns the version requested by the project config for a plugin, when present.
+    pub fn project_tool_version(&self, plugin_name: &str) -> Result<Option<String>, CoreError> {
+        Ok(vs_config::find_project_file(&self.cwd)
+            .map(|path| vs_config::read_tool_versions(&path))
+            .transpose()?
+            .and_then(|tools| tools.tools.get(plugin_name).cloned()))
+    }
+
+    /// Lists configured tools that should be installed for the current context.
+    pub fn configured_tools_for_install(&self) -> Result<Vec<(String, String)>, CoreError> {
+        Ok(self
+            .collect_current_tools()?
+            .into_iter()
+            .map(|tool| (tool.plugin, tool.version))
+            .collect())
+    }
 }

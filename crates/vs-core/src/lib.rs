@@ -9,7 +9,9 @@ mod service;
 
 pub use app::App;
 pub use error::CoreError;
-pub use models::{CurrentTool, InstalledVersion, MigrateSummary, PluginInfo, UseScope};
+pub use models::{
+    CurrentTool, InstalledVersion, MigrateSummary, PluginInfo, SelfUpgradeSummary, UseScope,
+};
 
 #[cfg(test)]
 mod tests {
@@ -47,9 +49,10 @@ mod tests {
         let source = temp_dir.path().join("nodejs-lua");
         write_lua_fixture(&source);
         app.add_plugin(
-            "nodejs",
+            Some("nodejs"),
             Some(source.display().to_string()),
             Some(PluginBackendKind::Lua),
+            None,
         )?;
         app.install_plugin_version("nodejs", Some("20.11.1"))?;
 

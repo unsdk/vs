@@ -42,7 +42,7 @@ impl App {
         installed.sort_by(|left, right| {
             left.plugin
                 .cmp(&right.plugin)
-                .then(left.version.cmp(&right.version))
+                .then(right.version.cmp(&left.version))
         });
         Ok(installed)
     }

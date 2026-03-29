@@ -1,8 +1,5 @@
 use clap::Args;
 
-/// Installs the latest available version for a plugin.
+/// Upgrade `vs` to the latest version.
 #[derive(Debug, Args)]
-pub struct UpgradeArgs {
-    /// Plugin name.
-    pub plugin: String,
-}
+pub struct UpgradeArgs;

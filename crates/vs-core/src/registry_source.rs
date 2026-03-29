@@ -78,10 +78,15 @@ pub fn fetch_plugin_manifest(
     plugin_name: &str,
 ) -> Result<RegistryPluginManifest, CoreError> {
     let url = registry_manifest_url(address, plugin_name);
-    let content = if is_remote_registry_source(&url) {
-        fetch_url_text(&url)?
+    fetch_plugin_manifest_from_url(&url)
+}
+
+/// Fetches a registry plugin manifest from a full URL or local path.
+pub fn fetch_plugin_manifest_from_url(url: &str) -> Result<RegistryPluginManifest, CoreError> {
+    let content = if is_remote_registry_source(url) {
+        fetch_url_text(url)?
     } else {
-        std::fs::read_to_string(&url)?
+        std::fs::read_to_string(url)?
     };
     serde_json::from_str(&content).map_err(|error| CoreError::RegistrySource {
         path: url.into(),

@@ -1,5 +1,8 @@
 use clap::Args;
 
-/// Lists installed versions from the local cache.
+/// List all versions of the target SDK.
 #[derive(Debug, Args)]
-pub struct ListArgs;
+pub struct ListArgs {
+    /// Optional plugin name.
+    pub plugin: Option<String>,
+}

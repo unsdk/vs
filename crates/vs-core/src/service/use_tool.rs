@@ -157,9 +157,10 @@ mod tests {
         let source = temp_dir.path().join("nodejs-lua");
         write_pre_use_fixture(&source)?;
         app.add_plugin(
-            "nodejs",
+            Some("nodejs"),
             Some(source.display().to_string()),
             Some(PluginBackendKind::Lua),
+            None,
         )?;
         app.install_plugin_version("nodejs", Some("20.11.1"))?;
 
@@ -192,9 +193,10 @@ mod tests {
         let source = temp_dir.path().join("nodejs-lua");
         write_pre_use_fixture(&source)?;
         app.add_plugin(
-            "nodejs",
+            Some("nodejs"),
             Some(source.display().to_string()),
             Some(PluginBackendKind::Lua),
+            None,
         )?;
 
         let error = match app.use_tool("nodejs", "20.11.1", UseScope::Project, false) {

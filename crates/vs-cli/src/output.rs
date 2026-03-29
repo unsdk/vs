@@ -33,27 +33,25 @@ pub fn print_available_plugins(entries: &[RegistryEntry]) {
 }
 
 pub fn print_plugin_info(info: &PluginInfo) {
-    print_heading("PLUGIN INFO");
-    println!("  Name      {}", info.manifest.name);
-    println!("  Backend   {}", backend_label(info.manifest.backend));
-    println!("  Source    {}", info.manifest.source.display());
+    println!("Plugin Info:");
+    println!("Name     -> {}", info.manifest.name);
+    if let Some(version) = &info.manifest.version {
+        println!("Version  -> {version}");
+    }
     if let Some(homepage) = &info.manifest.homepage {
-        println!("  Homepage  {homepage}");
+        println!("Homepage -> {homepage}");
     }
     println!(
-        "  Desc      {}",
+        "Desc     -> {}",
         info.manifest
             .description
             .as_deref()
             .unwrap_or("No description")
     );
-    if !info.installed_versions.is_empty() {
-        println!("  Installed {}", info.installed_versions.join(", "));
-    }
-    println!();
-    println!("AVAILABLE VERSIONS");
-    for version in &info.available_versions {
-        println!("  - {}", version_label(version));
+    if !info.manifest.notes.is_empty() {
+        for note in &info.manifest.notes {
+            println!("{note}");
+        }
     }
 }
 
@@ -79,40 +77,16 @@ pub fn print_search_versions(
     }
 }
 
-pub fn print_current_tools(current_tools: &[CurrentTool]) {
-    print_heading("CURRENT VERSIONS");
-    if current_tools.is_empty() {
-        println!("  No active tool versions.");
-        return;
-    }
-    for current in current_tools {
-        println!(
-            "  {} -> {} [{}]",
-            current.plugin,
-            current.version,
-            scope_label(current.scope)
-        );
-    }
-}
-
 pub fn print_current_tool(current: Option<&CurrentTool>, plugin: &str) {
-    print_heading("CURRENT VERSION");
     if let Some(current) = current {
-        println!(
-            "  {} -> {} [{}]",
-            current.plugin,
-            current.version,
-            scope_label(current.scope)
-        );
+        println!("-> v{}", current.version);
     } else {
-        println!("  {plugin} -> N/A");
+        println!("{plugin} -> N/A");
     }
 }
 
 pub fn print_installed_versions(installed: &[InstalledVersion], current_tools: &[CurrentTool]) {
-    print_heading("INSTALLED SDK VERSIONS");
     if installed.is_empty() {
-        println!("  No installed SDK versions.");
         return;
     }
 
@@ -138,6 +112,16 @@ pub fn print_installed_versions(installed: &[InstalledVersion], current_tools: &
                 ""
             };
             println!("  -> v{}{}", version.version, marker);
+        }
+    }
+}
+
+pub fn print_current_statuses(statuses: &[(String, Option<String>)]) {
+    for (plugin, version) in statuses {
+        if let Some(version) = version {
+            println!("{plugin} -> v{version}");
+        } else {
+            println!("{plugin} -> N/A");
         }
     }
 }
@@ -178,14 +162,5 @@ pub fn backend_label(backend: PluginBackendKind) -> &'static str {
     match backend {
         PluginBackendKind::Lua => "lua",
         PluginBackendKind::Wasi => "wasi",
-    }
-}
-
-fn scope_label(scope: vs_config::Scope) -> &'static str {
-    match scope {
-        vs_config::Scope::Project => "project",
-        vs_config::Scope::Session => "session",
-        vs_config::Scope::Global => "global",
-        vs_config::Scope::System => "system",
     }
 }

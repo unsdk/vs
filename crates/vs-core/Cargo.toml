@@ -12,10 +12,12 @@ wasi = ["dep:vs-plugin-wasi"]
 
 [dependencies]
 anyhow.workspace = true
+flate2.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true
+tar.workspace = true
 tempfile.workspace = true
 thiserror.workspace = true
 vs-config = { path = "../vs-config" }

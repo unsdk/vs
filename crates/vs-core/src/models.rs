@@ -71,3 +71,14 @@ pub struct MigrateSummary {
     /// Number of filesystem roots copied.
     pub copied_roots: usize,
 }
+
+/// Summary for a self-upgrade operation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SelfUpgradeSummary {
+    /// Currently running version.
+    pub current_version: String,
+    /// Latest available version discovered from the release feed.
+    pub latest_version: String,
+    /// Whether the binary was replaced.
+    pub updated: bool,
+}

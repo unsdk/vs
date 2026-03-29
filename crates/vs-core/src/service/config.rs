@@ -18,6 +18,26 @@ impl App {
         app_config_to_value(&config).map_err(Into::into)
     }
 
+    /// Returns config entries for an exact key or section prefix.
+    pub fn config_entries_for_key(&self, key: &str) -> Result<Vec<(String, String)>, CoreError> {
+        let entries = self.list_config()?;
+        if let Some(entry) = entries.iter().find(|(entry_key, _)| entry_key == key) {
+            return Ok(vec![entry.clone()]);
+        }
+
+        let prefix = format!("{key}.");
+        let matching = entries
+            .into_iter()
+            .filter(|(entry_key, _)| entry_key.starts_with(&prefix))
+            .collect::<Vec<_>>();
+        if matching.is_empty() {
+            return Err(CoreError::Config(vs_config::ConfigError::UnknownKey(
+                key.to_string(),
+            )));
+        }
+        Ok(matching)
+    }
+
     /// Sets a config key.
     pub fn set_config_value(&self, key: &str, value: &str) -> Result<(), CoreError> {
         let mut config = read_app_config(self.home())?;

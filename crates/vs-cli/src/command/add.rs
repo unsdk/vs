@@ -1,14 +1,17 @@
 use clap::{Args, ValueEnum};
 use vs_plugin_api::PluginBackendKind;
 
-/// Adds a plugin to the local home.
+/// Add a plugin or plugins.
 #[derive(Debug, Args)]
 pub struct AddArgs {
-    /// Plugin name.
-    pub name: String,
+    /// Plugin name or names.
+    pub names: Vec<String>,
     /// Plugin source path.
-    #[arg(long)]
+    #[arg(short = 's', long)]
     pub source: Option<String>,
+    /// Plugin alias used as the local command name.
+    #[arg(long)]
+    pub alias: Option<String>,
     /// Backend type when adding from an explicit source.
     #[arg(long, value_enum)]
     pub backend: Option<BackendArg>,

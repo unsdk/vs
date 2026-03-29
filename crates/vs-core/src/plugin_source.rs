@@ -20,9 +20,17 @@ impl App {
         &self,
         entry: &RegistryEntry,
     ) -> Result<RegistryEntry, CoreError> {
+        self.materialize_plugin_entry_with_refresh(entry, false)
+    }
+
+    pub(crate) fn materialize_plugin_entry_with_refresh(
+        &self,
+        entry: &RegistryEntry,
+        refresh: bool,
+    ) -> Result<RegistryEntry, CoreError> {
         self.ensure_backend_supported(entry.backend)?;
         if is_remote_source(&entry.source) {
-            let local_source = self.download_plugin_archive(&entry.name, &entry.source)?;
+            let local_source = self.download_plugin_archive(&entry.name, &entry.source, refresh)?;
             return Ok(RegistryEntry {
                 source: local_source.display().to_string(),
                 ..entry.clone()
@@ -43,10 +51,18 @@ impl App {
         self.home().join("plugins").join("sources")
     }
 
-    fn download_plugin_archive(&self, name: &str, url: &str) -> Result<PathBuf, CoreError> {
+    fn download_plugin_archive(
+        &self,
+        name: &str,
+        url: &str,
+        refresh: bool,
+    ) -> Result<PathBuf, CoreError> {
         let final_dir = self.plugin_sources_dir().join(name);
-        if final_dir.exists() {
+        if final_dir.exists() && !refresh {
             return Ok(final_dir);
+        }
+        if refresh && final_dir.exists() {
+            remove_existing(&final_dir)?;
         }
 
         let archive_url = normalize_remote_plugin_archive_url(url);

@@ -1,6 +1,6 @@
 use clap::Args;
 
-/// Prints `VS_HOME`, the plugin source directory, or the active runtime directory.
+/// Launches a shell in `VS_HOME`, the plugin source directory, or the active runtime directory.
 #[derive(Debug, Args)]
 pub struct CdArgs {
     /// Plugin name.

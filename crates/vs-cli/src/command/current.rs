@@ -1,6 +1,6 @@
 use clap::Args;
 
-/// Shows the active version for one or more tools.
+/// Show current version of the target SDK.
 #[derive(Debug, Args)]
 pub struct CurrentArgs {
     /// Optional plugin name.

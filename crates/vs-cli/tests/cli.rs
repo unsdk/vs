@@ -43,7 +43,6 @@ fn cli_should_run_registry_install_use_and_exec_flow() -> Result<(), Box<dyn std
         &project,
         &["config", "registry.address", registry_path.as_str()],
     ));
-    assert_success(run(&home, &project, &["update"]));
     assert_success(run(&home, &project, &["add", "nodejs"]));
     assert_success(run(&home, &project, &["install", "nodejs@20.11.1"]));
     assert_success(run(&home, &project, &["use", "nodejs@20.11.1", "-g"]));
@@ -81,7 +80,6 @@ fn cli_should_prefer_project_scope_and_support_unlink() -> Result<(), Box<dyn st
         &project,
         &["config", "registry.address", registry_path.as_str()],
     ));
-    assert_success(run(&home, &project, &["update"]));
     assert_success(run(&home, &project, &["add", "nodejs"]));
     assert_success(run(&home, &project, &["install", "nodejs@18.19.0"]));
     assert_success(run(&home, &project, &["install", "nodejs@20.11.1"]));
@@ -120,7 +118,6 @@ fn cli_use_without_version_should_require_explicit_version_in_non_interactive_mo
         &project,
         &["config", "registry.address", registry_path.as_str()],
     ));
-    assert_success(run(&home, &project, &["update"]));
     assert_success(run(&home, &project, &["add", "nodejs"]));
     assert_success(run(&home, &project, &["install", "nodejs@20.11.1"]));
 
@@ -155,11 +152,69 @@ fn cli_cd_should_support_home_and_plugin_directories() -> Result<(), Box<dyn std
         &project,
         &["config", "registry.address", registry_path.as_str()],
     ));
-    assert_success(run(&home, &project, &["update"]));
     assert_success(run(&home, &project, &["add", "nodejs"]));
 
     let plugin_dir = output_text(&run(&home, &project, &["cd", "nodejs", "--plugin"]));
     assert!(Path::new(plugin_dir.trim()).exists());
+    Ok(())
+}
+
+#[cfg(feature = "lua")]
+#[test]
+fn cli_should_support_config_get_info_path_and_list_plugin()
+-> Result<(), Box<dyn std::error::Error>> {
+    let temp_dir = temp_workspace();
+    let home = temp_dir.path().join("home");
+    let project = temp_dir.path().join("project");
+    fs::create_dir_all(&project)?;
+
+    let registry_path = fixture_root().join("registry/index.json");
+    let registry_path = registry_path.to_string_lossy().into_owned();
+    assert_success(run(
+        &home,
+        &project,
+        &["config", "registry.address", registry_path.as_str()],
+    ));
+
+    let config_value = output_text(&run(&home, &project, &["config", "registry.address"]));
+    assert_eq!(config_value.trim(), registry_path);
+
+    assert_success(run(&home, &project, &["add", "nodejs"]));
+    assert_success(run(&home, &project, &["install", "nodejs@20.11.1"]));
+    assert_success(run(&home, &project, &["use", "nodejs@20.11.1", "-g"]));
+
+    let list_output = output_text(&run(&home, &project, &["list", "nodejs"]));
+    assert!(list_output.contains("nodejs"));
+    assert!(list_output.contains("v20.11.1"));
+
+    let info_path = output_text(&run(&home, &project, &["info", "nodejs@20.11.1"]));
+    assert!(Path::new(info_path.trim()).exists());
+    Ok(())
+}
+
+#[cfg(feature = "lua")]
+#[test]
+fn cli_should_support_auto_add_and_alias() -> Result<(), Box<dyn std::error::Error>> {
+    let temp_dir = temp_workspace();
+    let home = temp_dir.path().join("home");
+    let project = temp_dir.path().join("project");
+    fs::create_dir_all(&project)?;
+
+    let registry_path = fixture_root().join("registry/index.json");
+    let registry_path = registry_path.to_string_lossy().into_owned();
+    assert_success(run(
+        &home,
+        &project,
+        &["config", "registry.address", registry_path.as_str()],
+    ));
+
+    assert_success(run(&home, &project, &["install", "-y", "nodejs@20.11.1"]));
+    assert!(output_text(&run(&home, &project, &["info", "nodejs"])).contains("Plugin Info:"));
+
+    assert_success(run(&home, &project, &["add", "nodejs", "--alias", "node"]));
+    assert!(output_text(&run(&home, &project, &["info", "node"])).contains("Plugin Info:"));
+
+    assert_success(run(&home, &project, &["update", "node"]));
     Ok(())
 }
 

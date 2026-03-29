@@ -44,6 +44,24 @@ pub fn prompt_for_version_selection(plugin: &str) -> Result<bool> {
         .map_err(Into::into)
 }
 
+pub fn prompt_for_plugin_addition(plugin: &str) -> Result<bool> {
+    Confirm::with_theme(&ColorfulTheme::default())
+        .with_prompt(format!(
+            "Plugin {plugin} is not added yet. Do you want to add it now?"
+        ))
+        .default(false)
+        .interact()
+        .map_err(Into::into)
+}
+
+pub fn prompt_for_install_all() -> Result<bool> {
+    Confirm::with_theme(&ColorfulTheme::default())
+        .with_prompt("Do you want to install these plugins and SDKs?")
+        .default(true)
+        .interact()
+        .map_err(Into::into)
+}
+
 pub fn select_version(plugin: &str, versions: &[AvailableVersion]) -> Result<Option<usize>> {
     let labels = versions.iter().map(version_label).collect::<Vec<_>>();
     FuzzySelect::with_theme(&ColorfulTheme::default())

@@ -1,8 +1,11 @@
 use clap::Args;
 
-/// Shows plugin metadata and known versions.
+/// Show plugin info or SDK path.
 #[derive(Debug, Args)]
 pub struct InfoArgs {
-    /// Plugin name.
-    pub name: String,
+    /// Plugin name or `plugin@version`.
+    pub spec: String,
+    /// Format the output using placeholders such as `{{.Name}}`.
+    #[arg(short = 'f', long)]
+    pub format: Option<String>,
 }
