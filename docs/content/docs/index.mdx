@@ -1,11 +1,11 @@
 ---
-title: Documentation Overview
+title: Overview
 description: Start here for installation flows, CLI behavior, plugin concepts, and workspace details.
 ---
 
 `vs` is a Rust workspace for a cross-platform runtime version manager inspired by `vfox`.
 
-This documentation is organized around practical workflows:
+`vs` is organized around a few core workflows:
 
 <Cards>
   <Card
@@ -30,8 +30,8 @@ This documentation is organized around practical workflows:
   />
 </Cards>
 
-<Callout type="info" title="What this site assumes">
-  Examples use the current repository layout and command surface from `vs-cli`. When a page discusses a behavior that is still evolving, it is called out explicitly.
+<Callout type="info" title="Current implementation notes">
+  Examples use the current repository layout and command surface from `vs-cli`. When a behavior is still evolving, the page calls it out explicitly.
 </Callout>
 
 ## Recommended path
@@ -46,4 +46,4 @@ This documentation is organized around practical workflows:
 - A multi-crate Rust workspace with explicit boundaries between CLI, orchestration, config, registry, installer, plugins, and shell integration.
 - Compile-time backend selection for Lua plugins, native WASI-style plugins, or both.
 - Scope-aware version activation for projects, sessions, and global use.
-- A docs site that maps directly to the current repository implementation instead of a generic scaffold.
+- A repository implementation that keeps the CLI, orchestration, config, plugins, installer, and shell logic in explicit crate boundaries.

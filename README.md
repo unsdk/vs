@@ -6,7 +6,7 @@
 
 This repository provides the initial multi-crate implementation with:
 
-- an English-only CLI named `vs`
+- an CLI named `vs`
 - config resolution for `.vs.toml`, `vs.toml`, `.vfox.toml`, `vfox.toml`, and common legacy files
 - a local plugin registry model
 - transactional local installs

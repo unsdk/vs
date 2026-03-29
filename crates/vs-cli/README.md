@@ -4,7 +4,7 @@
 
 ## Responsibilities
 
-- define the English-only CLI surface
+- define the CLI surface
 - parse command arguments with `clap`
 - delegate business logic to `vs-core`
 - print human-readable command results

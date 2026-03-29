@@ -64,16 +64,15 @@
               <section className="grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)] lg:items-center">
                 <div className="space-y-6">
                   <div className="inline-flex items-center rounded-full border border-neutral-200 px-3 py-1 text-sm text-neutral-600 dark:border-neutral-800 dark:text-neutral-300">
-                    Rust workspace · static docs · GitHub Pages
+                    Cross-platform runtime version manager
                   </div>
                   <div className="space-y-4">
                     <h1 className="max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
-                      Documentation for <span className="text-neutral-500 dark:text-neutral-300">vs</span>
+                      Manage runtime versions with <span className="text-neutral-500 dark:text-neutral-300">vs</span>
                     </h1>
                     <p className="max-w-2xl text-lg leading-8 text-neutral-600 dark:text-neutral-300">
-                      vs is a cross-platform runtime version manager inspired by vfox. This site covers
-                      installation flows, CLI behavior, plugin models, and the workspace architecture
-                      behind the project.
+                      vs is a cross-platform runtime version manager inspired by vfox, with explicit
+                      project, session, and global activation flows plus support for multiple plugin backends.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-3">
@@ -125,9 +124,9 @@ eval "$(vs activate zsh)"`}</code>
 
               <section className="space-y-6">
                 <div className="space-y-2">
-                  <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">What the docs focus on</h2>
+                  <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Core capabilities</h2>
                   <p className="max-w-3xl text-neutral-600 dark:text-neutral-300">
-                    The site is organized around the workflows you hit when using or extending vs in a real repository.
+                    vs is built for everyday runtime management as well as plugin and workspace development.
                   </p>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -148,9 +147,9 @@ eval "$(vs activate zsh)"`}</code>
 
               <section className="space-y-6">
                 <div className="space-y-2">
-                  <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Browse the handbook</h2>
+                  <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Explore vs</h2>
                   <p className="max-w-3xl text-neutral-600 dark:text-neutral-300">
-                    Choose the section that matches your current task, from first-run setup to plugin internals.
+                    Jump directly to setup, command behavior, plugin development, or workspace architecture.
                   </p>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
