@@ -24,12 +24,12 @@ SUPPORTED_TARGETS: list[dict[str, Any]] = [
     {"target": "s390x-unknown-linux-musl", "runner": "ubuntu-latest", "archive": "tar.gz", "builder": "cross"},
     {"target": "x86_64-unknown-linux-musl", "runner": "ubuntu-latest", "archive": "tar.gz", "builder": "cross"},
     # macOS native targets
-    {"target": "aarch64-apple-darwin", "runner": "macos-latest", "archive": "tar.gz", "builder": "cargo"},
-    {"target": "x86_64-apple-darwin", "runner": "macos-13", "archive": "tar.gz", "builder": "cargo"},
+    {"target": "aarch64-apple-darwin", "runner": "macos-15", "archive": "tar.gz", "builder": "cargo"},
+    {"target": "x86_64-apple-darwin", "runner": "macos-15-intel", "archive": "tar.gz", "builder": "cargo"},
     # Windows MSVC targets
-    {"target": "aarch64-pc-windows-msvc", "runner": "windows-latest", "archive": "zip", "builder": "cargo"},
-    {"target": "i686-pc-windows-msvc", "runner": "windows-latest", "archive": "zip", "builder": "cargo"},
-    {"target": "x86_64-pc-windows-msvc", "runner": "windows-latest", "archive": "zip", "builder": "cargo"},
+    {"target": "aarch64-pc-windows-msvc", "runner": "windows-11-arm", "archive": "zip", "builder": "cargo"},
+    {"target": "i686-pc-windows-msvc", "runner": "windows-2025", "archive": "zip", "builder": "cargo"},
+    {"target": "x86_64-pc-windows-msvc", "runner": "windows-2025", "archive": "zip", "builder": "cargo"},
 ]
 
 
