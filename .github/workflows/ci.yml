@@ -99,9 +99,7 @@ jobs:
       - name: Configure musl linker
         if: ${{ matrix.platform.musl }}
         shell: bash
-        run: |
-          echo "CC_x86_64_unknown_linux_musl=musl-gcc" >> "$GITHUB_ENV"
-          echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc" >> "$GITHUB_ENV"
+        run: bash ./scripts/github-actions/configure_musl.sh
 
       - name: Add Rust target
         if: ${{ matrix.platform.target != '' }}
@@ -109,33 +107,14 @@ jobs:
 
       - name: Read workspace version
         id: version
-        shell: bash
-        run: |
-          python - <<'PY'
-          import os
-          import re
-          from pathlib import Path
-
-          cargo_toml = Path("Cargo.toml").read_text()
-          match = re.search(r'\[workspace\.package\][\s\S]*?^version\s*=\s*"([^"]+)"', cargo_toml, re.MULTILINE)
-          if not match:
-              raise SystemExit("failed to read workspace version")
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
-              handle.write(f"version={match.group(1)}\n")
-          PY
+        run: python3 ./scripts/github-actions/read_workspace_version.py
 
       - name: Build minimal binary
         shell: bash
         env:
           BUILD_TARGET: ${{ matrix.platform.target }}
           FEATURE_FLAGS: ${{ matrix.feature.flags }}
-        run: |
-          set -euxo pipefail
-          if [ -n "$BUILD_TARGET" ]; then
-            cargo build -p vs-cli --profile "$BUILD_PROFILE" --locked --no-default-features --features "$FEATURE_FLAGS" --target "$BUILD_TARGET"
-          else
-            cargo build -p vs-cli --profile "$BUILD_PROFILE" --locked --no-default-features --features "$FEATURE_FLAGS"
-          fi
+        run: bash ./scripts/github-actions/build_binary.sh
 
       - name: Package Unix artifact
         if: ${{ runner.os != 'Windows' }}
@@ -145,18 +124,7 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
           PLATFORM_LABEL: ${{ matrix.platform.label }}
           ARTIFACT_VARIANT: ${{ matrix.feature.label }}
-        run: |
-          set -euxo pipefail
-          if [ -n "$BUILD_TARGET" ]; then
-            binary_path="target/$BUILD_TARGET/$BUILD_PROFILE/vs"
-          else
-            binary_path="target/$BUILD_PROFILE/vs"
-          fi
-          archive_name="vs-v${VERSION}-${PLATFORM_LABEL}-${ARTIFACT_VARIANT}.tar.gz"
-          staging_dir="$(mktemp -d)"
-          cp "$binary_path" "$staging_dir/vs"
-          tar -C "$staging_dir" -czf "$archive_name" vs
-          echo "ARCHIVE_PATH=$archive_name" >> "$GITHUB_ENV"
+        run: bash ./scripts/github-actions/package_unix.sh
 
       - name: Package Windows artifact
         if: ${{ runner.os == 'Windows' }}
@@ -166,18 +134,8 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
           PLATFORM_LABEL: ${{ matrix.platform.label }}
           ARTIFACT_VARIANT: ${{ matrix.feature.label }}
-        run: |
-          if ($env:BUILD_TARGET -ne "") {
-            $binaryPath = "target\$env:BUILD_TARGET\$env:BUILD_PROFILE\vs.exe"
-          } else {
-            $binaryPath = "target\$env:BUILD_PROFILE\vs.exe"
-          }
-          $archiveName = "vs-v$env:VERSION-$env:PLATFORM_LABEL-$env:ARTIFACT_VARIANT.zip"
-          $stagingDir = Join-Path $env:RUNNER_TEMP "vs-package-$env:PLATFORM_LABEL-$env:ARTIFACT_VARIANT"
-          New-Item -ItemType Directory -Force -Path $stagingDir | Out-Null
-          Copy-Item $binaryPath (Join-Path $stagingDir "vs.exe")
-          Compress-Archive -Path (Join-Path $stagingDir "*") -DestinationPath $archiveName -Force
-          Add-Content -Path $env:GITHUB_ENV -Value "ARCHIVE_PATH=$archiveName"
+          STAGING_DIR_NAME: vs-package-${{ matrix.platform.label }}-${{ matrix.feature.label }}
+        run: ./scripts/github-actions/package_windows.ps1
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

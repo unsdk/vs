@@ -36,37 +36,12 @@ jobs:
         shell: bash
         env:
           INPUT_VERSION: ${{ github.event.inputs.version }}
-        run: |
-          set -euo pipefail
-          VERSION="${INPUT_VERSION#v}"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+        run: bash ./scripts/github-actions/normalize_version.sh
 
       - name: Update workspace version
-        shell: bash
         env:
           VERSION: ${{ steps.release_meta.outputs.version }}
-        run: |
-          python - <<'PY'
-          import os
-          import re
-          from pathlib import Path
-
-          version = os.environ["VERSION"]
-          cargo_toml_path = Path("Cargo.toml")
-          cargo_toml = cargo_toml_path.read_text(encoding="utf-8")
-          pattern = r'(\[workspace\.package\][\s\S]*?^version\s*=\s*")([^"]+)(")'
-          updated, replacements = re.subn(pattern, rf'\g<1>{version}\3', cargo_toml, count=1, flags=re.MULTILINE)
-          if replacements != 1:
-              raise SystemExit("failed to update workspace version")
-          def update_internal_dep(match: re.Match[str]) -> str:
-              line = match.group(0)
-              if 'path = "crates/' not in line:
-                  return line
-              return re.sub(r'(version\s*=\s*")([^"]+)(")', rf'\g<1>{version}\3', line, count=1)
-          updated = re.sub(r'^vs-[^=]+\s*=\s*\{[^}]*\}$', update_internal_dep, updated, flags=re.MULTILINE)
-          cargo_toml_path.write_text(updated, encoding="utf-8")
-          PY
+        run: python3 ./scripts/github-actions/update_workspace_version.py
 
       - name: Refresh lockfile
         run: cargo check -p vs-cli --all-features
@@ -75,24 +50,13 @@ jobs:
         shell: bash
         env:
           VERSION: ${{ steps.release_meta.outputs.version }}
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Cargo.toml Cargo.lock
-          if ! git diff --cached --quiet; then
-            git commit -m "release: v$VERSION"
-          fi
+        run: bash ./scripts/github-actions/commit_release.sh
 
       - name: Push commit and tag
         shell: bash
         env:
           TAG: ${{ steps.release_meta.outputs.tag }}
-        run: |
-          set -euo pipefail
-          git tag "$TAG"
-          git push origin HEAD:${GITHUB_REF_NAME}
-          git push origin "$TAG"
+        run: bash ./scripts/github-actions/push_commit_and_tag.sh
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
@@ -157,9 +121,7 @@ jobs:
       - name: Configure musl linker
         if: ${{ matrix.platform.musl }}
         shell: bash
-        run: |
-          echo "CC_x86_64_unknown_linux_musl=musl-gcc" >> "$GITHUB_ENV"
-          echo "CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc" >> "$GITHUB_ENV"
+        run: bash ./scripts/github-actions/configure_musl.sh
 
       - name: Add Rust target
         if: ${{ matrix.platform.target != '' }}
@@ -170,13 +132,7 @@ jobs:
         env:
           BUILD_TARGET: ${{ matrix.platform.target }}
           FEATURE_FLAGS: ${{ matrix.feature.flags }}
-        run: |
-          set -euxo pipefail
-          if [ -n "$BUILD_TARGET" ]; then
-            cargo build -p vs-cli --profile "$BUILD_PROFILE" --locked --no-default-features --features "$FEATURE_FLAGS" --target "$BUILD_TARGET"
-          else
-            cargo build -p vs-cli --profile "$BUILD_PROFILE" --locked --no-default-features --features "$FEATURE_FLAGS"
-          fi
+        run: bash ./scripts/github-actions/build_binary.sh
 
       - name: Package Unix release asset
         if: ${{ runner.os != 'Windows' }}
@@ -186,18 +142,7 @@ jobs:
           VERSION: ${{ needs.prepare-release.outputs.version }}
           PLATFORM_LABEL: ${{ matrix.platform.label }}
           ARTIFACT_VARIANT: ${{ matrix.feature.label }}
-        run: |
-          set -euxo pipefail
-          if [ -n "$BUILD_TARGET" ]; then
-            binary_path="target/$BUILD_TARGET/$BUILD_PROFILE/vs"
-          else
-            binary_path="target/$BUILD_PROFILE/vs"
-          fi
-          archive_name="vs-v${VERSION}-${PLATFORM_LABEL}-${ARTIFACT_VARIANT}.tar.gz"
-          staging_dir="$(mktemp -d)"
-          cp "$binary_path" "$staging_dir/vs"
-          tar -C "$staging_dir" -czf "$archive_name" vs
-          echo "ARCHIVE_PATH=$archive_name" >> "$GITHUB_ENV"
+        run: bash ./scripts/github-actions/package_unix.sh
 
       - name: Package Windows release asset
         if: ${{ runner.os == 'Windows' }}
@@ -207,18 +152,8 @@ jobs:
           VERSION: ${{ needs.prepare-release.outputs.version }}
           PLATFORM_LABEL: ${{ matrix.platform.label }}
           ARTIFACT_VARIANT: ${{ matrix.feature.label }}
-        run: |
-          if ($env:BUILD_TARGET -ne "") {
-            $binaryPath = "target\$env:BUILD_TARGET\$env:BUILD_PROFILE\vs.exe"
-          } else {
-            $binaryPath = "target\$env:BUILD_PROFILE\vs.exe"
-          }
-          $archiveName = "vs-v$env:VERSION-$env:PLATFORM_LABEL-$env:ARTIFACT_VARIANT.zip"
-          $stagingDir = Join-Path $env:RUNNER_TEMP "vs-release-$env:PLATFORM_LABEL-$env:ARTIFACT_VARIANT"
-          New-Item -ItemType Directory -Force -Path $stagingDir | Out-Null
-          Copy-Item $binaryPath (Join-Path $stagingDir "vs.exe")
-          Compress-Archive -Path (Join-Path $stagingDir "*") -DestinationPath $archiveName -Force
-          Add-Content -Path $env:GITHUB_ENV -Value "ARCHIVE_PATH=$archiveName"
+          STAGING_DIR_NAME: vs-release-${{ matrix.platform.label }}-${{ matrix.feature.label }}
+        run: ./scripts/github-actions/package_windows.ps1
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
@@ -237,10 +172,9 @@ jobs:
   publish-crates:
     name: Publish crates.io packages
     needs: [prepare-release, build-release-artifacts]
-    if: ${{ secrets.CARGO_REGISTRY_TOKEN != '' || vars.CARGO_REGISTRY_TOKEN != '' }}
     runs-on: ubuntu-latest
     env:
-      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN != '' && secrets.CARGO_REGISTRY_TOKEN || vars.CARGO_REGISTRY_TOKEN }}
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN || vars.CARGO_REGISTRY_TOKEN }}
 
     steps:
       - uses: actions/checkout@v4
@@ -255,56 +189,4 @@ jobs:
 
       - name: Publish workspace crates
         shell: bash
-        run: |
-          set -euo pipefail
-
-          publish_with_retry() {
-            local crate="$1"
-            local max_attempts=10
-            local attempt=1
-
-            while [ "$attempt" -le "$max_attempts" ]; do
-              echo "Publishing $crate (attempt $attempt/$max_attempts)..."
-              set +e
-              output="$(cargo publish -p "$crate" --locked 2>&1)"
-              status=$?
-              set -e
-              echo "$output"
-
-              if [ "$status" -eq 0 ]; then
-                return 0
-              fi
-
-              if grep -qiE "already uploaded|already exists|has already been uploaded" <<<"$output"; then
-                echo "$crate is already published, skipping."
-                return 0
-              fi
-
-              if [ "$attempt" -eq "$max_attempts" ]; then
-                echo "Publishing $crate failed after $max_attempts attempts."
-                return "$status"
-              fi
-
-              echo "Retrying $crate in 20 seconds..."
-              sleep 20
-              attempt=$((attempt + 1))
-            done
-          }
-
-          crates=(
-            vs-plugin-api
-            vs-shell
-            vs-config
-            vs-plugin-sdk
-            vs-registry
-            vs-installer
-            vs-plugin-lua
-            vs-plugin-wasi
-            vs-test-support
-            vs-core
-            vs-cli
-          )
-
-          for crate in "${crates[@]}"; do
-            publish_with_retry "$crate"
-          done
+        run: bash ./scripts/github-actions/publish_crates.sh
