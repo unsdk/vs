@@ -66,10 +66,10 @@ jobs:
       matrix:
         target: ${{ fromJson(needs.build-targets.outputs.matrix).include }}
         feature:
-          - label: lua
-            flags: lua
-          - label: wasi
-            flags: wasi
+          # - label: lua
+          #   flags: lua
+          # - label: wasi
+          #   flags: wasi
           - label: full
             flags: lua,wasi
 
