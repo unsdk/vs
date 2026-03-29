@@ -15,15 +15,23 @@ use crate::{App, CoreError, SelfUpgradeSummary};
 const RELEASE_REPOSITORY: &str = "unsdk/vs";
 
 #[derive(Debug, Deserialize)]
-struct LatestRelease {
+struct ReleaseMetadata {
     tag_name: String,
+    #[serde(default)]
+    assets: Vec<ReleaseAsset>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ReleaseAsset {
+    name: String,
+    browser_download_url: String,
 }
 
 impl App {
     /// Returns the current and latest available self-upgrade versions.
     pub fn self_upgrade_summary(&self) -> Result<SelfUpgradeSummary, CoreError> {
         let current_version = format!("v{}", env!("CARGO_PKG_VERSION"));
-        let latest_version = fetch_latest_release_tag()?;
+        let latest_version = fetch_latest_release()?.tag_name;
         Ok(SelfUpgradeSummary {
             updated: current_version != latest_version,
             current_version,
@@ -54,15 +62,23 @@ impl App {
             temp_dir.path().display()
         );
 
-        let archive_name = release_archive_name(latest_version);
-        let archive_path = temp_dir.path().join(&archive_name);
-        let download_url = release_asset_url(latest_version);
+        let release = fetch_release_by_tag(latest_version)?;
+        let asset = select_release_asset(&release)?;
+        println!(
+            "Resolved release asset {} for target {} with feature {}.",
+            asset.name,
+            release_target_triple(),
+            release_feature_label()
+        );
+
+        let archive_name = &asset.name;
+        let archive_path = temp_dir.path().join(archive_name);
         println!(
             "Downloading {} to {}...",
-            download_url,
+            asset.browser_download_url,
             archive_path.display()
         );
-        download_release_archive(&download_url, &archive_path)?;
+        download_release_archive(&asset.browser_download_url, &archive_path)?;
 
         let unpack_dir = temp_dir.path().join("unpacked");
         let replacement = if cfg!(windows) {
@@ -81,25 +97,51 @@ impl App {
     }
 }
 
-fn fetch_latest_release_tag() -> Result<String, CoreError> {
-    let client = Client::builder()
+fn fetch_latest_release() -> Result<ReleaseMetadata, CoreError> {
+    fetch_release_from_endpoint(&format!(
+        "https://api.github.com/repos/{RELEASE_REPOSITORY}/releases/latest"
+    ))
+}
+
+fn fetch_release_by_tag(tag: &str) -> Result<ReleaseMetadata, CoreError> {
+    fetch_release_from_endpoint(&format!(
+        "https://api.github.com/repos/{RELEASE_REPOSITORY}/releases/tags/{tag}"
+    ))
+}
+
+fn fetch_release_from_endpoint(url: &str) -> Result<ReleaseMetadata, CoreError> {
+    let response = github_client()?.get(url).send()?.error_for_status()?;
+    response.json::<ReleaseMetadata>().map_err(Into::into)
+}
+
+fn github_client() -> Result<Client, CoreError> {
+    Client::builder()
         .user_agent(format!("vs/{}", env!("CARGO_PKG_VERSION")))
-        .build()?;
-    let response = client
-        .get(format!(
-            "https://api.github.com/repos/{RELEASE_REPOSITORY}/releases/latest"
+        .build()
+        .map_err(Into::into)
+}
+
+fn select_release_asset(release: &ReleaseMetadata) -> Result<&ReleaseAsset, CoreError> {
+    let expected_name = release_archive_name(&release.tag_name);
+    release.assets.iter().find(|asset| asset.name == expected_name).ok_or_else(|| {
+        let available = release
+            .assets
+            .iter()
+            .map(|asset| asset.name.as_str())
+            .collect::<Vec<_>>()
+            .join(", ");
+        CoreError::Unsupported(format!(
+            "no release asset matched target {} with feature {}. expected {}, available assets: {}",
+            release_target_triple(),
+            release_feature_label(),
+            expected_name,
+            available
         ))
-        .send()?
-        .error_for_status()?;
-    let release = response.json::<LatestRelease>()?;
-    Ok(release.tag_name)
+    })
 }
 
 fn download_release_archive(url: &str, archive_path: &Path) -> Result<(), CoreError> {
-    let client = Client::builder()
-        .user_agent(format!("vs/{}", env!("CARGO_PKG_VERSION")))
-        .build()?;
-    let mut response = client.get(url).send()?.error_for_status()?;
+    let mut response = github_client()?.get(url).send()?.error_for_status()?;
     let progress_bar = create_download_progress_bar(response.content_length());
     let mut output = fs::File::create(archive_path)?;
     let mut buffer = [0_u8; 8192];
@@ -129,13 +171,6 @@ fn create_download_progress_bar(total_size: Option<u64>) -> ProgressBar {
     .progress_chars("=> ");
     progress_bar.set_style(style);
     progress_bar
-}
-
-fn release_asset_url(tag: &str) -> String {
-    format!(
-        "https://github.com/{RELEASE_REPOSITORY}/releases/download/{tag}/{}",
-        release_archive_name(tag)
-    )
 }
 
 fn release_archive_name(tag: &str) -> String {
@@ -312,14 +347,31 @@ fn executable_name() -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::{
-        release_archive_name, release_asset_url, release_feature_label, release_target_triple,
+        ReleaseAsset, ReleaseMetadata, release_archive_name, release_feature_label,
+        release_target_triple, select_release_asset,
     };
 
     #[test]
-    fn release_asset_url_should_reference_current_repository() {
-        let url = release_asset_url("v1.2.3");
-        assert!(url.contains("github.com/unsdk/vs/releases/download/v1.2.3/"));
-        assert!(url.contains("v1.2.3"));
+    fn select_release_asset_should_match_expected_archive_name() {
+        let release = ReleaseMetadata {
+            tag_name: String::from("v1.2.3"),
+            assets: vec![
+                ReleaseAsset {
+                    name: String::from("vs-v1.2.3-other-target-full.tar.gz"),
+                    browser_download_url: String::from("https://example.com/other"),
+                },
+                ReleaseAsset {
+                    name: release_archive_name("v1.2.3"),
+                    browser_download_url: String::from("https://example.com/match"),
+                },
+            ],
+        };
+
+        let asset = match select_release_asset(&release) {
+            Ok(asset) => asset,
+            Err(error) => panic!("release asset should match: {error}"),
+        };
+        assert_eq!(asset.browser_download_url, "https://example.com/match");
     }
 
     #[test]
