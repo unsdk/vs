@@ -38,5 +38,5 @@ You do not need shell activation to run a tool through `vs`.
 Example:
 
 ```bash
-vs exec node
+vs exec nodejs node -v
 ```

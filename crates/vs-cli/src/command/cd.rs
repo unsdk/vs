@@ -1,8 +1,11 @@
 use clap::Args;
 
-/// Prints the active runtime directory for a tool.
+/// Prints `VS_HOME`, the plugin source directory, or the active runtime directory.
 #[derive(Debug, Args)]
 pub struct CdArgs {
     /// Plugin name.
-    pub plugin: String,
+    pub plugin: Option<String>,
+    /// Print the plugin source directory instead of the active runtime directory.
+    #[arg(short = 'p', long = "plugin")]
+    pub plugin_dir: bool,
 }

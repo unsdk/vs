@@ -53,3 +53,12 @@ pub fn select_version(plugin: &str, versions: &[AvailableVersion]) -> Result<Opt
         .interact_opt()
         .map_err(Into::into)
 }
+
+pub fn select_installed_version(plugin: &str, versions: &[String]) -> Result<Option<usize>> {
+    FuzzySelect::with_theme(&ColorfulTheme::default())
+        .with_prompt(format!("Please select a version of {plugin} to use"))
+        .items(versions)
+        .default(0)
+        .interact_opt()
+        .map_err(Into::into)
+}

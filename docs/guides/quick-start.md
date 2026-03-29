@@ -81,7 +81,7 @@ vs current nodejs
 ## 6. Run a command with the resolved environment
 
 ```bash
-vs exec node
+vs exec nodejs node -v
 ```
 
 ## 7. Enable shell activation

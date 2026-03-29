@@ -29,17 +29,23 @@ pub enum Commands {
     Update(UpdateArgs),
     Info(InfoArgs),
     Search(SearchArgs),
+    #[command(visible_alias = "i")]
     Install(InstallArgs),
+    #[command(visible_alias = "un")]
     Uninstall(UninstallArgs),
+    #[command(visible_alias = "u")]
     Use(UseArgs),
     Unuse(UnuseArgs),
+    #[command(visible_alias = "ls")]
     List(ListArgs),
+    #[command(visible_alias = "c")]
     Current(CurrentArgs),
     Config(ConfigArgs),
     Cd(CdArgs),
     Upgrade(UpgradeArgs),
     Activate(ActivateArgs),
     Completion(CompletionArgs),
+    #[command(visible_alias = "x")]
     Exec(ExecArgs),
     Migrate(MigrateArgs),
     #[command(hide = true, name = "__hook-env")]

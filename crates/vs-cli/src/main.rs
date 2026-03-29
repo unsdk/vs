@@ -17,7 +17,10 @@ use crate::output::{
     print_available_plugins, print_current_tool, print_current_tools, print_installed_versions,
     print_plugin_info, print_search_versions, print_status,
 };
-use crate::tui::{prompt_for_version_selection, run_search_tui, should_use_interactive_tui};
+use crate::tui::{
+    prompt_for_version_selection, run_search_tui, select_installed_version,
+    should_use_interactive_tui,
+};
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -127,13 +130,32 @@ fn run_with_app(app: App, command: Commands) -> Result<i32> {
         }
         Commands::Use(args) => {
             let (plugin, version) = parse_tool_spec(&args.spec)?;
-            let version = version.context("use requires plugin@version")?;
+            let version = if let Some(version) = version {
+                version
+            } else if should_use_interactive_tui() {
+                let installed_versions = app
+                    .installed_versions_for_plugin(&plugin)?
+                    .into_iter()
+                    .map(|installed| installed.version)
+                    .collect::<Vec<_>>();
+                if installed_versions.is_empty() {
+                    anyhow::bail!(
+                        "no installed versions available for {}. Please run `vs install {}@<version>` first",
+                        plugin,
+                        plugin
+                    );
+                }
+                let Some(index) = select_installed_version(&plugin, &installed_versions)? else {
+                    return Ok(0);
+                };
+                installed_versions[index].clone()
+            } else {
+                anyhow::bail!("Please specify a version to use in non-interactive environments");
+            };
             let installed = app.use_tool(&plugin, &version, args.scope(), args.unlink)?;
             print_status(&format!(
-                "Using {} {} in {} scope",
-                installed.plugin,
-                installed.version,
-                scope_label(args.scope())
+                "Now using {}@{}.",
+                installed.plugin, installed.version
             ));
             Ok(0)
         }
@@ -167,7 +189,12 @@ fn run_with_app(app: App, command: Commands) -> Result<i32> {
             Ok(0)
         }
         Commands::Cd(args) => {
-            println!("{}", app.cd_path(&args.plugin)?);
+            let path = match args.plugin.as_deref() {
+                Some(plugin) if args.plugin_dir => app.plugin_dir(plugin)?,
+                Some(plugin) => app.cd_path(plugin)?,
+                None => app.home_dir(),
+            };
+            println!("{path}");
             Ok(0)
         }
         Commands::Upgrade(args) => {
@@ -260,19 +287,34 @@ fn parse_tool_spec(spec: &str) -> Result<(String, Option<String>)> {
         anyhow::bail!("tool spec cannot be empty");
     }
     if let Some((plugin, version)) = spec.split_once('@') {
+        let plugin = plugin.trim().to_ascii_lowercase();
+        let version = version.trim().trim_start_matches('v');
         if plugin.is_empty() || version.is_empty() {
             anyhow::bail!("invalid tool spec: {spec}");
         }
-        Ok((plugin.to_string(), Some(version.to_string())))
+        Ok((plugin, Some(version.to_string())))
     } else {
-        Ok((spec.to_string(), None))
+        Ok((spec.to_ascii_lowercase(), None))
     }
 }
 
 fn scope_label(scope: UseScope) -> &'static str {
-    match scope {
-        UseScope::Global => "global",
-        UseScope::Project => "project",
-        UseScope::Session => "session",
+    scope.as_str()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_tool_spec;
+
+    #[test]
+    fn parse_tool_spec_should_normalize_name_and_trim_v_prefix() {
+        let parsed = match parse_tool_spec("NodeJS@v20.11.1") {
+            Ok(parsed) => parsed,
+            Err(error) => panic!("tool spec should parse: {error}"),
+        };
+        assert_eq!(
+            parsed,
+            (String::from("nodejs"), Some(String::from("20.11.1")))
+        );
     }
 }

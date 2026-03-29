@@ -1,5 +1,5 @@
 use clap::Args;
 
-/// Refreshes the registry index from `registry.source`.
+/// Refreshes the registry index from `registry.address`.
 #[derive(Debug, Args)]
 pub struct UpdateArgs;

@@ -51,6 +51,7 @@ mod tests {
             Some(source.display().to_string()),
             Some(PluginBackendKind::Lua),
         )?;
+        app.install_plugin_version("nodejs", Some("20.11.1"))?;
 
         app.use_tool("nodejs", "20.11.1", UseScope::Project, false)?;
 

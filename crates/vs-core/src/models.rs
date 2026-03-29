@@ -15,6 +15,17 @@ pub enum UseScope {
     Session,
 }
 
+impl UseScope {
+    /// Returns the stable lowercase scope label used by CLI output and plugin hooks.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Global => "global",
+            Self::Project => "project",
+            Self::Session => "session",
+        }
+    }
+}
+
 /// A currently resolved tool.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CurrentTool {
