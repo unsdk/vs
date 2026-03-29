@@ -18,8 +18,9 @@ use crate::output::{
     print_plugin_info, print_search_versions, print_status,
 };
 use crate::tui::{
-    prompt_for_install_all, prompt_for_plugin_addition, prompt_for_version_selection,
-    run_search_tui, select_installed_version, should_use_interactive_tui,
+    prompt_for_install_all, prompt_for_plugin_addition, prompt_for_upgrade,
+    prompt_for_version_selection, run_search_tui, select_installed_version,
+    should_use_interactive_tui,
 };
 
 fn main() -> Result<()> {
@@ -310,15 +311,29 @@ fn run_with_app(app: App, command: Commands) -> Result<i32> {
             }
         }
         Commands::Upgrade(args) => {
-            let _ = args;
-            let summary = app.upgrade_self()?;
+            let summary = app.self_upgrade_summary()?;
             print_status(&format!("Current version: {}", summary.current_version));
             print_status(&format!("Latest available: {}", summary.latest_version));
-            if summary.updated {
-                print_status(&format!("Updated to version: {}", summary.latest_version));
-            } else {
+            if !summary.updated {
                 print_status("vs is already up to date.");
+                return Ok(0);
             }
+
+            if !args.yes {
+                if should_use_interactive_tui() {
+                    if !prompt_for_upgrade(&summary.current_version, &summary.latest_version)? {
+                        print_status("Upgrade cancelled.");
+                        return Ok(0);
+                    }
+                } else {
+                    anyhow::bail!(
+                        "upgrade requires confirmation in non-interactive environments; rerun with --yes"
+                    );
+                }
+            }
+
+            let summary = app.upgrade_self_to(&summary.latest_version)?;
+            print_status(&format!("Updated to version: {}", summary.latest_version));
             Ok(0)
         }
         Commands::Activate(args) => {

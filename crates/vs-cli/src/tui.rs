@@ -62,6 +62,16 @@ pub fn prompt_for_install_all() -> Result<bool> {
         .map_err(Into::into)
 }
 
+pub fn prompt_for_upgrade(current_version: &str, latest_version: &str) -> Result<bool> {
+    Confirm::with_theme(&ColorfulTheme::default())
+        .with_prompt(format!(
+            "Upgrade vs from {current_version} to {latest_version}?"
+        ))
+        .default(true)
+        .interact()
+        .map_err(Into::into)
+}
+
 pub fn select_version(plugin: &str, versions: &[AvailableVersion]) -> Result<Option<usize>> {
     let labels = versions.iter().map(version_label).collect::<Vec<_>>();
     FuzzySelect::with_theme(&ColorfulTheme::default())

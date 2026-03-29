@@ -2136,6 +2136,7 @@ version = "0.0.1"
 dependencies = [
  "anyhow",
  "flate2",
+ "indicatif",
  "reqwest",
  "serde",
  "serde_json",

@@ -1,8 +1,9 @@
 use std::fs;
-use std::io::Cursor;
+use std::io::{Cursor, Read};
 use std::path::{Path, PathBuf};
 
 use flate2::read::GzDecoder;
+use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::blocking::Client;
 use serde::Deserialize;
 use tar::Archive;
@@ -19,14 +20,24 @@ struct LatestRelease {
 }
 
 impl App {
-    /// Upgrades the running `vs` binary to the latest published release.
-    pub fn upgrade_self(&self) -> Result<SelfUpgradeSummary, CoreError> {
+    /// Returns the current and latest available self-upgrade versions.
+    pub fn self_upgrade_summary(&self) -> Result<SelfUpgradeSummary, CoreError> {
         let current_version = format!("v{}", env!("CARGO_PKG_VERSION"));
         let latest_version = fetch_latest_release_tag()?;
+        Ok(SelfUpgradeSummary {
+            updated: current_version != latest_version,
+            current_version,
+            latest_version,
+        })
+    }
+
+    /// Upgrades the running `vs` binary to the provided published release version.
+    pub fn upgrade_self_to(&self, latest_version: &str) -> Result<SelfUpgradeSummary, CoreError> {
+        let current_version = format!("v{}", env!("CARGO_PKG_VERSION"));
         if current_version == latest_version {
             return Ok(SelfUpgradeSummary {
                 current_version,
-                latest_version,
+                latest_version: latest_version.to_string(),
                 updated: false,
             });
         }
@@ -38,24 +49,33 @@ impl App {
         let temp_dir = Builder::new()
             .prefix("vs-upgrade-")
             .tempdir_in(executable_dir)?;
-        let archive_name = release_archive_name(&latest_version);
+        println!(
+            "Preparing upgrade workspace in {}...",
+            temp_dir.path().display()
+        );
+
+        let archive_name = release_archive_name(latest_version);
         let archive_path = temp_dir.path().join(&archive_name);
-        let download_url = release_asset_url(&latest_version);
+        let download_url = release_asset_url(latest_version);
+        println!(
+            "Downloading {} to {}...",
+            download_url,
+            archive_path.display()
+        );
+        download_release_archive(&download_url, &archive_path)?;
 
-        let bytes = download_release_bytes(&download_url)?;
-        fs::write(&archive_path, bytes)?;
-
+        let unpack_dir = temp_dir.path().join("unpacked");
         let replacement = if cfg!(windows) {
-            extract_zip_binary(&archive_path, temp_dir.path())?
+            extract_zip_binary(&archive_path, &unpack_dir)?
         } else {
-            extract_tar_gz_binary(&archive_path, temp_dir.path())?
+            extract_tar_gz_binary(&archive_path, &unpack_dir)?
         };
 
         replace_running_executable(&executable, &replacement)?;
 
         Ok(SelfUpgradeSummary {
             current_version,
-            latest_version,
+            latest_version: latest_version.to_string(),
             updated: true,
         })
     }
@@ -75,15 +95,40 @@ fn fetch_latest_release_tag() -> Result<String, CoreError> {
     Ok(release.tag_name)
 }
 
-fn download_release_bytes(url: &str) -> Result<Vec<u8>, CoreError> {
+fn download_release_archive(url: &str, archive_path: &Path) -> Result<(), CoreError> {
     let client = Client::builder()
         .user_agent(format!("vs/{}", env!("CARGO_PKG_VERSION")))
         .build()?;
-    let response = client.get(url).send()?.error_for_status()?;
-    response
-        .bytes()
-        .map(|bytes| bytes.to_vec())
-        .map_err(Into::into)
+    let mut response = client.get(url).send()?.error_for_status()?;
+    let progress_bar = create_download_progress_bar(response.content_length());
+    let mut output = fs::File::create(archive_path)?;
+    let mut buffer = [0_u8; 8192];
+
+    loop {
+        let read = response.read(&mut buffer)?;
+        if read == 0 {
+            break;
+        }
+        std::io::Write::write_all(&mut output, &buffer[..read])?;
+        progress_bar.inc(read as u64);
+    }
+
+    progress_bar.finish_and_clear();
+    Ok(())
+}
+
+fn create_download_progress_bar(total_size: Option<u64>) -> ProgressBar {
+    let progress_bar = match total_size {
+        Some(total_size) => ProgressBar::new(total_size),
+        None => ProgressBar::new_spinner(),
+    };
+    let style = ProgressStyle::with_template(
+        "Downloading... {wide_bar} {bytes}/{total_bytes} ({bytes_per_sec})",
+    )
+    .unwrap_or_else(|_| ProgressStyle::default_bar())
+    .progress_chars("=> ");
+    progress_bar.set_style(style);
+    progress_bar
 }
 
 fn release_asset_url(tag: &str) -> String {
@@ -122,7 +167,7 @@ fn release_archive_extension() -> &'static str {
 }
 
 fn release_feature_label() -> &'static str {
-    #[cfg(feature = "full")]
+    #[cfg(any(feature = "full", all(feature = "lua", feature = "wasi")))]
     {
         "full"
     }
@@ -141,14 +186,20 @@ fn release_feature_label() -> &'static str {
 }
 
 fn extract_tar_gz_binary(archive_path: &Path, destination: &Path) -> Result<PathBuf, CoreError> {
+    println!(
+        "Unpacking {} to {}...",
+        archive_path.display(),
+        destination.display()
+    );
+    fs::create_dir_all(destination)?;
     let bytes = fs::read(archive_path)?;
     let cursor = Cursor::new(bytes);
     let decoder = GzDecoder::new(cursor);
     let mut archive = Archive::new(decoder);
     archive.unpack(destination)?;
-    let binary_name = executable_name();
-    let extracted = destination.join(binary_name);
+    let extracted = destination.join(executable_name());
     if extracted.exists() {
+        println!("Extracted binary to {}.", extracted.display());
         return Ok(extracted);
     }
     Err(CoreError::Unsupported(format!(
@@ -158,6 +209,12 @@ fn extract_tar_gz_binary(archive_path: &Path, destination: &Path) -> Result<Path
 }
 
 fn extract_zip_binary(archive_path: &Path, destination: &Path) -> Result<PathBuf, CoreError> {
+    println!(
+        "Unpacking {} to {}...",
+        archive_path.display(),
+        destination.display()
+    );
+    fs::create_dir_all(destination)?;
     let bytes = fs::read(archive_path)?;
     let cursor = Cursor::new(bytes);
     let mut archive = ZipArchive::new(cursor)?;
@@ -182,6 +239,7 @@ fn extract_zip_binary(archive_path: &Path, destination: &Path) -> Result<PathBuf
             .file_name()
             .is_some_and(|name| name == binary_name)
         {
+            println!("Extracted binary to {}.", output_path.display());
             return Ok(output_path);
         }
     }
@@ -198,7 +256,13 @@ fn replace_running_executable(executable: &Path, replacement: &Path) -> Result<(
         if backup.exists() {
             fs::remove_file(&backup)?;
         }
+        println!("Moving {} to {}...", executable.display(), backup.display());
         fs::rename(executable, &backup)?;
+        println!(
+            "Moving {} to {}...",
+            replacement.display(),
+            executable.display()
+        );
         fs::rename(replacement, executable)?;
 
         let cleanup_script = executable.with_extension("cleanup.bat");
@@ -208,7 +272,9 @@ fn replace_running_executable(executable: &Path, replacement: &Path) -> Result<(
             backup.display(),
             cleanup_script.display()
         );
+        println!("Writing cleanup script to {}...", cleanup_script.display());
         fs::write(&cleanup_script, script)?;
+        println!("Starting cleanup helper process...");
         std::process::Command::new("cmd.exe")
             .args(["/C", cleanup_script.to_string_lossy().as_ref()])
             .spawn()
@@ -221,6 +287,11 @@ fn replace_running_executable(executable: &Path, replacement: &Path) -> Result<(
 
     #[cfg(not(windows))]
     {
+        println!(
+            "Moving {} to {}...",
+            replacement.display(),
+            executable.display()
+        );
         fs::rename(replacement, executable)?;
         let mut permissions = fs::metadata(executable)?.permissions();
         #[cfg(unix)]
@@ -228,6 +299,7 @@ fn replace_running_executable(executable: &Path, replacement: &Path) -> Result<(
             use std::os::unix::fs::PermissionsExt;
             permissions.set_mode(0o755);
         }
+        println!("Updating file permissions for {}...", executable.display());
         fs::set_permissions(executable, permissions)?;
         Ok(())
     }
