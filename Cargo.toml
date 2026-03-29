@@ -3,7 +3,7 @@ members = ["crates/*"]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "0.0.1"
 edition = "2024"
 license = "MIT"
 rust-version = "1.85"
@@ -35,17 +35,17 @@ toml = "0.8.20"
 walkdir = "2.5.0"
 xz2 = "0.1.7"
 zip = { version = "2.4.2", default-features = false, features = ["deflate"] }
-vs-cli = { version = "0.1.0", path = "crates/vs-cli" }
-vs-config = { version = "0.1.0", path = "crates/vs-config" }
-vs-core = { version = "0.1.0", path = "crates/vs-core", default-features = false }
-vs-installer = { version = "0.1.0", path = "crates/vs-installer" }
-vs-plugin-api = { version = "0.1.0", path = "crates/vs-plugin-api" }
-vs-plugin-lua = { version = "0.1.0", path = "crates/vs-plugin-lua" }
-vs-plugin-sdk = { version = "0.1.0", path = "crates/vs-plugin-sdk" }
-vs-plugin-wasi = { version = "0.1.0", path = "crates/vs-plugin-wasi" }
-vs-registry = { version = "0.1.0", path = "crates/vs-registry" }
-vs-shell = { version = "0.1.0", path = "crates/vs-shell" }
-vs-test-support = { version = "0.1.0", path = "crates/vs-test-support" }
+vs-cli = { version = "0.0.1", path = "crates/vs-cli" }
+vs-config = { version = "0.0.1", path = "crates/vs-config" }
+vs-core = { version = "0.0.1", path = "crates/vs-core", default-features = false }
+vs-installer = { version = "0.0.1", path = "crates/vs-installer" }
+vs-plugin-api = { version = "0.0.1", path = "crates/vs-plugin-api" }
+vs-plugin-lua = { version = "0.0.1", path = "crates/vs-plugin-lua" }
+vs-plugin-sdk = { version = "0.0.1", path = "crates/vs-plugin-sdk" }
+vs-plugin-wasi = { version = "0.0.1", path = "crates/vs-plugin-wasi" }
+vs-registry = { version = "0.0.1", path = "crates/vs-registry" }
+vs-shell = { version = "0.0.1", path = "crates/vs-shell" }
+vs-test-support = { version = "0.0.1", path = "crates/vs-test-support" }
 
 [profile.release]
 codegen-units = 1

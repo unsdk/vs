@@ -2104,7 +2104,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vs-cli"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -2120,7 +2120,7 @@ dependencies = [
 
 [[package]]
 name = "vs-config"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "dirs",
  "serde",
@@ -2132,7 +2132,7 @@ dependencies = [
 
 [[package]]
 name = "vs-core"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "anyhow",
  "flate2",
@@ -2156,7 +2156,7 @@ dependencies = [
 
 [[package]]
 name = "vs-installer"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "flate2",
  "indicatif",
@@ -2177,7 +2177,7 @@ dependencies = [
 
 [[package]]
 name = "vs-plugin-api"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "serde",
  "thiserror",
@@ -2185,7 +2185,7 @@ dependencies = [
 
 [[package]]
 name = "vs-plugin-lua"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "flate2",
  "mlua",
@@ -2202,7 +2202,7 @@ dependencies = [
 
 [[package]]
 name = "vs-plugin-sdk"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "serde",
  "vs-plugin-api",
@@ -2210,7 +2210,7 @@ dependencies = [
 
 [[package]]
 name = "vs-plugin-wasi"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "serde",
  "thiserror",
@@ -2220,7 +2220,7 @@ dependencies = [
 
 [[package]]
 name = "vs-registry"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -2231,14 +2231,14 @@ dependencies = [
 
 [[package]]
 name = "vs-shell"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "thiserror",
 ]
 
 [[package]]
 name = "vs-test-support"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "tempfile",
 ]
