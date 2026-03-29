@@ -96,17 +96,24 @@ fn release_asset_url(tag: &str) -> String {
 fn release_archive_name(tag: &str) -> String {
     format!(
         "vs-{tag}-{}-{}.{}",
-        release_platform_label(),
+        release_target_triple(),
         release_feature_label(),
         release_archive_extension()
     )
 }
 
-fn release_platform_label() -> &'static str {
-    match std::env::consts::OS {
-        "macos" => "macos",
-        "windows" => "windows",
-        _ => "linux",
+fn release_target_triple() -> &'static str {
+    match (std::env::consts::OS, std::env::consts::ARCH) {
+        ("linux", "x86_64") => "x86_64-unknown-linux-gnu",
+        ("linux", "x86") => "i686-unknown-linux-gnu",
+        ("linux", "aarch64") => "aarch64-unknown-linux-gnu",
+        ("linux", "arm") => "armv7-unknown-linux-gnueabihf",
+        ("macos", "aarch64") => "aarch64-apple-darwin",
+        ("macos", "x86_64") => "x86_64-apple-darwin",
+        ("windows", "x86_64") => "x86_64-pc-windows-msvc",
+        ("windows", "x86") => "i686-pc-windows-msvc",
+        ("windows", "aarch64") => "aarch64-pc-windows-msvc",
+        _ => "x86_64-unknown-linux-gnu",
     }
 }
 
@@ -115,9 +122,9 @@ fn release_archive_extension() -> &'static str {
 }
 
 fn release_feature_label() -> &'static str {
-    #[cfg(all(feature = "lua", feature = "wasi"))]
+    #[cfg(feature = "full")]
     {
-        "lua-wasi"
+        "full"
     }
     #[cfg(all(feature = "lua", not(feature = "wasi")))]
     {
@@ -232,7 +239,9 @@ fn executable_name() -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::{release_archive_name, release_asset_url, release_feature_label};
+    use super::{
+        release_archive_name, release_asset_url, release_feature_label, release_target_triple,
+    };
 
     #[test]
     fn release_asset_url_should_reference_current_repository() {
@@ -245,5 +254,11 @@ mod tests {
     fn release_archive_name_should_include_feature_variant() {
         let archive_name = release_archive_name("v1.2.3");
         assert!(archive_name.contains(release_feature_label()));
+    }
+
+    #[test]
+    fn release_archive_name_should_include_target_triple() {
+        let archive_name = release_archive_name("v1.2.3");
+        assert!(archive_name.contains(release_target_triple()));
     }
 }

@@ -10,7 +10,8 @@ description = "Core orchestration services for the vs version manager."
 readme = "README.md"
 
 [features]
-default = ["lua", "wasi"]
+default = ["full"]
+full = ["lua", "wasi"]
 lua = ["dep:vs-plugin-lua"]
 wasi = ["dep:vs-plugin-wasi"]
 

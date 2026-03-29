@@ -38,8 +38,8 @@ publish_with_retry() {
       return "$status"
     fi
 
-    echo "Retrying $crate in 20 seconds..."
-    sleep 20
+    echo "Retrying $crate in 10 minutes..."
+    sleep 600
     attempt=$((attempt + 1))
   done
 }

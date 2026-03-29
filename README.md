@@ -27,7 +27,7 @@ Examples:
 ```bash
 cargo build -p vs-cli --no-default-features --features lua
 cargo build -p vs-cli --no-default-features --features wasi
-cargo build -p vs-cli --no-default-features --features "lua,wasi"
+cargo build -p vs-cli --no-default-features --features full
 ```
 
 For the smallest binaries, use the dedicated size-first profile:

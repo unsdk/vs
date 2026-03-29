@@ -15,7 +15,7 @@ Backend-specific builds are also supported:
 ```bash
 cargo build -p vs-cli --no-default-features --features lua
 cargo build -p vs-cli --no-default-features --features wasi
-cargo build -p vs-cli --no-default-features --features "lua,wasi"
+cargo build -p vs-cli --no-default-features --features full
 ```
 
 For distribution builds where binary size matters more than build time, prefer:

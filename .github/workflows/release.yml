@@ -99,7 +99,7 @@ jobs:
           - label: wasi
             flags: wasi
           - label: full
-            flags: lua,wasi
+            flags: full
 
     steps:
       - uses: actions/checkout@v6

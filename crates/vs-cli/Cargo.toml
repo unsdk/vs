@@ -10,7 +10,8 @@ description = "Command-line interface for the vs version manager."
 readme = "README.md"
 
 [features]
-default = ["lua", "wasi"]
+default = ["full"]
+full = ["lua", "wasi"]
 lua = ["vs-core/lua"]
 wasi = ["vs-core/wasi"]
 
