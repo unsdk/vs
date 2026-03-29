@@ -23,9 +23,16 @@ impl App {
         delta.path_entries.push(bin_dir(runtime.main_path()));
         apply_exec_env_keys(&mut delta, plugin.env_keys(&runtime)?);
         let path_value = self.path_with_delta(&delta)?;
-        let resolved_command = resolve_command_path(command, &delta.path_entries);
+        let resolved_command = resolve_command_path(command, &delta.path_entries)
+            .ok_or_else(|| CoreError::CommandExecution {
+                command: command.to_string(),
+                message: format!(
+                    "command not found in {} environment",
+                    runtime.plugin
+                ),
+            })?;
 
-        let mut child = Command::new(resolved_command.unwrap_or_else(|| PathBuf::from(command)));
+        let mut child = Command::new(resolved_command);
         child.args(args);
         child.env("PATH", path_value);
         for (key, value) in delta.vars {
@@ -48,6 +55,9 @@ impl App {
         requested_version: Option<&str>,
     ) -> Result<InstalledRuntime, CoreError> {
         let version = if let Some(version) = requested_version {
+            if let Some(runtime) = self.load_installed_runtime(plugin_name, version)? {
+                return Ok(runtime);
+            }
             let installed = self.install_plugin_version(plugin_name, Some(version))?;
             installed.version
         } else {
