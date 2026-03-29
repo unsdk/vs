@@ -97,7 +97,7 @@
                   </p>
                 </div>
 
-                <div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+                <div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900 overflow-x-auto">
                   <div className="mb-4 flex items-center justify-between">
                     <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">
                       Quick start
