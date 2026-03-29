@@ -19,7 +19,7 @@ jobs:
       tag: ${{ steps.release_meta.outputs.tag }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -27,7 +27,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.x"
 
@@ -72,7 +72,7 @@ jobs:
       matrix: ${{ steps.matrix.outputs.matrix }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ needs.prepare-release.outputs.tag }}
 
@@ -102,7 +102,7 @@ jobs:
             flags: lua,wasi
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ needs.prepare-release.outputs.tag }}
 
@@ -151,7 +151,7 @@ jobs:
         run: ./scripts/github-actions/package_windows.ps1
 
       - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: vs-v${{ needs.prepare-release.outputs.version }}-${{ matrix.target.target }}-${{ matrix.feature.label }}
           path: ${{ env.ARCHIVE_PATH }}
@@ -173,7 +173,7 @@ jobs:
       CARGO_REGISTRY_TOKEN_FALLBACK: ${{ vars.CARGO_REGISTRY_TOKEN }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ needs.prepare-release.outputs.tag }}
 
