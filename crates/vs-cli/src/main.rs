@@ -184,7 +184,10 @@ fn run_with_app(app: App, command: Commands) -> Result<i32> {
             print!("{}", app.activate(&args.shell)?);
             Ok(0)
         }
-        Commands::Exec(args) => Ok(app.exec(&args.command, &args.args)?),
+        Commands::Exec(args) => {
+            let (plugin, version) = parse_tool_spec(&args.spec)?;
+            Ok(app.exec(&plugin, version.as_deref(), &args.command, &args.args)?)
+        }
         Commands::Migrate(args) => {
             let summary = app.migrate(args.source)?;
             print_status(&format!(

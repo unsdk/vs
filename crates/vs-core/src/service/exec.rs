@@ -2,12 +2,26 @@ use std::env::split_paths;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use vs_plugin_api::InstalledRuntime;
+use vs_shell::{EnvDelta, bin_dir};
+
 use crate::{App, CoreError};
 
 impl App {
-    /// Executes a command with the currently resolved runtime environment.
-    pub fn exec(&self, command: &str, args: &[String]) -> Result<i32, CoreError> {
-        let delta = self.build_env()?;
+    /// Executes a command with the resolved runtime environment for a specific SDK.
+    pub fn exec(
+        &self,
+        plugin_name: &str,
+        requested_version: Option<&str>,
+        command: &str,
+        args: &[String],
+    ) -> Result<i32, CoreError> {
+        let runtime = self.resolve_exec_runtime(plugin_name, requested_version)?;
+        let entry = self.resolve_registry_entry(plugin_name)?;
+        let plugin = self.load_plugin(&entry)?;
+        let mut delta = EnvDelta::default();
+        delta.path_entries.push(bin_dir(runtime.main_path()));
+        apply_exec_env_keys(&mut delta, plugin.env_keys(&runtime)?);
         let path_value = self.path_with_delta(&delta)?;
         let resolved_command = resolve_command_path(command, &delta.path_entries);
 
@@ -26,6 +40,32 @@ impl App {
             })?;
 
         Ok(status.code().unwrap_or(1))
+    }
+
+    fn resolve_exec_runtime(
+        &self,
+        plugin_name: &str,
+        requested_version: Option<&str>,
+    ) -> Result<InstalledRuntime, CoreError> {
+        let version = if let Some(version) = requested_version {
+            let installed = self.install_plugin_version(plugin_name, Some(version))?;
+            installed.version
+        } else {
+            self.current_tool(plugin_name)?
+                .map(|current| current.version)
+                .ok_or_else(|| {
+                    CoreError::Unsupported(format!(
+                        "no version configured for {plugin_name}. Please use `vs use` first"
+                    ))
+                })?
+        };
+
+        self.load_installed_runtime(plugin_name, &version)?
+            .ok_or_else(|| {
+                CoreError::Unsupported(format!(
+                    "failed to load installed runtime for {plugin_name}@{version}"
+                ))
+            })
     }
 }
 
@@ -91,6 +131,16 @@ fn resolve_command_path(command: &str, preferred_paths: &[PathBuf]) -> Option<Pa
     }
 
     None
+}
+
+fn apply_exec_env_keys(delta: &mut EnvDelta, env_keys: Vec<vs_plugin_api::EnvKey>) {
+    for env_key in env_keys {
+        if env_key.key == "PATH" {
+            delta.path_entries.push(PathBuf::from(env_key.value));
+        } else {
+            delta.vars.push((env_key.key, env_key.value));
+        }
+    }
 }
 
 #[cfg(test)]

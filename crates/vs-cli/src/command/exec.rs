@@ -3,6 +3,8 @@ use clap::Args;
 /// Executes a command with the resolved runtime environment.
 #[derive(Debug, Args)]
 pub struct ExecArgs {
+    /// Tool spec in the form `plugin` or `plugin@version`.
+    pub spec: String,
     /// Command to execute.
     pub command: String,
     /// Remaining command arguments.
