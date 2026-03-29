@@ -4,7 +4,7 @@ if ($env:BUILD_TARGET -ne "") {
     $binaryPath = "target\$env:BUILD_PROFILE\vs.exe"
 }
 
-$archiveName = "vs-v$env:VERSION-$env:PLATFORM_LABEL-$env:ARTIFACT_VARIANT.zip"
+$archiveName = "vs-v$env:VERSION-$env:TARGET_TRIPLE-$env:ARTIFACT_VARIANT.zip"
 $stagingDir = Join-Path $env:RUNNER_TEMP $env:STAGING_DIR_NAME
 New-Item -ItemType Directory -Force -Path $stagingDir | Out-Null
 Copy-Item $binaryPath (Join-Path $stagingDir "vs.exe")

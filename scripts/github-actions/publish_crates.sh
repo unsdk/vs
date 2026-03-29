@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ -z "${CARGO_REGISTRY_TOKEN:-}" && -n "${CARGO_REGISTRY_TOKEN_FALLBACK:-}" ]]; then
+  export CARGO_REGISTRY_TOKEN="$CARGO_REGISTRY_TOKEN_FALLBACK"
+fi
+
 if [[ -z "${CARGO_REGISTRY_TOKEN:-}" ]]; then
   echo "CARGO_REGISTRY_TOKEN is not configured; skipping crates.io publish."
   exit 0

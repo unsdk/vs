@@ -65,42 +65,40 @@ jobs:
           name: ${{ steps.release_meta.outputs.tag }}
           generate_release_notes: true
 
-  build-release-artifacts:
-    name: Release ${{ matrix.feature.label }} on ${{ matrix.platform.label }}
+  build-targets:
     needs: prepare-release
-    runs-on: ${{ matrix.platform.runner }}
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare-release.outputs.tag }}
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Generate build target matrix
+        id: matrix
+        run: python3 ./scripts/github-actions/generate_build_matrix.py
+
+  build-release-artifacts:
+    name: Release ${{ matrix.feature.label }} on ${{ matrix.target.target }}
+    needs: [prepare-release, build-targets]
+    runs-on: ${{ matrix.target.runner }}
     env:
       BUILD_PROFILE: min-size
     strategy:
       fail-fast: false
       matrix:
-        platform:
-          - label: linux
-            runner: ubuntu-latest
-            target: ""
-            archive: tar.gz
-            musl: false
-          - label: macos
-            runner: macos-latest
-            target: ""
-            archive: tar.gz
-            musl: false
-          - label: windows
-            runner: windows-latest
-            target: ""
-            archive: zip
-            musl: false
-          - label: linux-musl
-            runner: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            archive: tar.gz
-            musl: true
+        target: ${{ fromJson(needs.build-targets.outputs.matrix).include }}
         feature:
           - label: lua
             flags: lua
           - label: wasi
             flags: wasi
-          - label: lua-wasi
+          - label: full
             flags: lua,wasi
 
     steps:
@@ -114,23 +112,20 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Install musl toolchain
-        if: ${{ matrix.platform.musl }}
-        run: sudo apt-get update && sudo apt-get install -y musl-tools
-
-      - name: Configure musl linker
-        if: ${{ matrix.platform.musl }}
-        shell: bash
-        run: bash ./scripts/github-actions/configure_musl.sh
+      - name: Install cross
+        if: ${{ matrix.target.builder == 'cross' }}
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cross
 
       - name: Add Rust target
-        if: ${{ matrix.platform.target != '' }}
-        run: rustup target add ${{ matrix.platform.target }}
+        run: rustup target add ${{ matrix.target.target }}
 
       - name: Build minimal binary
         shell: bash
         env:
-          BUILD_TARGET: ${{ matrix.platform.target }}
+          BUILD_TARGET: ${{ matrix.target.target }}
+          BUILD_TOOL: ${{ matrix.target.builder }}
           FEATURE_FLAGS: ${{ matrix.feature.flags }}
         run: bash ./scripts/github-actions/build_binary.sh
 
@@ -138,9 +133,9 @@ jobs:
         if: ${{ runner.os != 'Windows' }}
         shell: bash
         env:
-          BUILD_TARGET: ${{ matrix.platform.target }}
+          BUILD_TARGET: ${{ matrix.target.target }}
           VERSION: ${{ needs.prepare-release.outputs.version }}
-          PLATFORM_LABEL: ${{ matrix.platform.label }}
+          TARGET_TRIPLE: ${{ matrix.target.target }}
           ARTIFACT_VARIANT: ${{ matrix.feature.label }}
         run: bash ./scripts/github-actions/package_unix.sh
 
@@ -148,17 +143,17 @@ jobs:
         if: ${{ runner.os == 'Windows' }}
         shell: pwsh
         env:
-          BUILD_TARGET: ${{ matrix.platform.target }}
+          BUILD_TARGET: ${{ matrix.target.target }}
           VERSION: ${{ needs.prepare-release.outputs.version }}
-          PLATFORM_LABEL: ${{ matrix.platform.label }}
+          TARGET_TRIPLE: ${{ matrix.target.target }}
           ARTIFACT_VARIANT: ${{ matrix.feature.label }}
-          STAGING_DIR_NAME: vs-release-${{ matrix.platform.label }}-${{ matrix.feature.label }}
+          STAGING_DIR_NAME: vs-release-${{ matrix.target.target }}-${{ matrix.feature.label }}
         run: ./scripts/github-actions/package_windows.ps1
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: vs-v${{ needs.prepare-release.outputs.version }}-${{ matrix.platform.label }}-${{ matrix.feature.label }}
+          name: vs-v${{ needs.prepare-release.outputs.version }}-${{ matrix.target.target }}-${{ matrix.feature.label }}
           path: ${{ env.ARCHIVE_PATH }}
           if-no-files-found: error
           retention-days: 30
@@ -174,7 +169,8 @@ jobs:
     needs: [prepare-release, build-release-artifacts]
     runs-on: ubuntu-latest
     env:
-      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN || vars.CARGO_REGISTRY_TOKEN }}
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      CARGO_REGISTRY_TOKEN_FALLBACK: ${{ vars.CARGO_REGISTRY_TOKEN }}
 
     steps:
       - uses: actions/checkout@v4
