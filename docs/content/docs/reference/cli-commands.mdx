@@ -9,17 +9,16 @@ This page summarizes the commands exposed by `vs-cli` today.
 
 ### `vs update`
 
-Refresh the searchable plugin index from the configured registry source:
+Update a locally added plugin, or update all locally added plugins:
 
 ```bash
-vs update
 vs update nodejs
 vs update --all
 ```
 
-- `vs update` with no arguments refreshes the registry index.
-- `vs update <plugin>` refreshes one locally added plugin.
-- `vs update --all` refreshes all locally added plugins.
+- `vs update <plugin>` updates one locally added plugin.
+- `vs update --all` updates all locally added plugins.
+- In the current help surface, `vs update` without a plugin name is not the registry-refresh workflow.
 
 ### `vs available`
 
@@ -28,6 +27,8 @@ List plugins from the cached registry index:
 ```bash
 vs available
 ```
+
+Registry-backed commands such as `vs available`, `vs search`, and `vs add <name>` refresh the cached index on demand when a registry source is configured.
 
 ### `vs search`
 
@@ -46,6 +47,7 @@ Add a plugin from the registry:
 
 ```bash
 vs add nodejs
+vs add nodejs deno
 ```
 
 Add a plugin directly from a source directory or URL:
@@ -60,6 +62,8 @@ Remove a locally added plugin entry:
 ```bash
 vs remove nodejs
 ```
+
+`vs add` accepts one or more plugin names, or a single explicit `--source`.
 
 ## Install, activate, and inspect runtimes
 

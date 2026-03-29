@@ -50,7 +50,7 @@ For local development, the repository ships a fixture registry index:
 
 ```bash
 vs config registry.address /absolute/path/to/fixtures/registry/index.json
-vs update
+vs available
 ```
 
 In current builds, `registry.address` accepts either a registry base URL or a direct local `index.json` path.
@@ -61,7 +61,7 @@ When `vs` is built with the `lua` feature and `registry.address` is unset, `vs` 
 https://version-fox.github.io/vfox-plugins
 ```
 
-Commands that need registry metadata, such as `vs available`, `vs search`, and `vs add <name>`, refresh the cached index automatically when a registry source is configured.
+Commands that need registry metadata, such as `vs available`, `vs search`, and `vs add <name>`, refresh the cached index automatically when a registry source is configured. In other words, the current CLI workflow is to configure `registry.address` and then use a registry-backed command, rather than running a standalone registry refresh command.
 
 ## 4. Add a plugin
 
