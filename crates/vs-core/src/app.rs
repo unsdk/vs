@@ -114,27 +114,39 @@ impl App {
     }
 
     pub(crate) fn resolve_registry_entry(&self, name: &str) -> Result<RegistryEntry, CoreError> {
-        if let Some(entry) = self.registry.resolve(name)? {
+        if let Some(entry) = self
+            .registry
+            .added_plugins()?
+            .into_iter()
+            .find(|entry| entry.matches(name))
+        {
             return Ok(entry);
         }
 
-        self.ensure_registry_index_loaded()?;
+        self.refresh_registry_index_with_fallback()?;
         self.registry
-            .resolve(name)?
+            .available_plugins()?
+            .into_iter()
+            .find(|entry| entry.matches(name))
             .ok_or_else(|| CoreError::UnknownPlugin(name.to_string()))
     }
 
-    pub(crate) fn ensure_registry_index_loaded(&self) -> Result<(), CoreError> {
-        if !self.registry.available_plugins()?.is_empty() {
+    pub(crate) fn refresh_registry_index_with_fallback(&self) -> Result<(), CoreError> {
+        let config = self.app_config()?;
+        if config.registry.address.is_empty() {
             return Ok(());
         }
 
-        let config = self.app_config()?;
-        if !config.registry.address.is_empty() {
-            self.update_registry()?;
+        match self.update_registry() {
+            Ok(_) => Ok(()),
+            Err(error) => {
+                if self.registry.available_plugins()?.is_empty() {
+                    Err(error)
+                } else {
+                    Ok(())
+                }
+            }
         }
-
-        Ok(())
     }
 
     pub(crate) fn load_plugin(&self, entry: &RegistryEntry) -> Result<Box<dyn Plugin>, CoreError> {

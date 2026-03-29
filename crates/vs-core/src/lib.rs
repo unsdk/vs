@@ -103,6 +103,134 @@ mod tests {
     }
 
     #[cfg(feature = "lua")]
+    #[test]
+    fn available_plugins_should_fallback_to_cached_registry_when_refresh_fails()
+    -> Result<(), Box<dyn Error>> {
+        let temp_dir = TempDir::new()?;
+        let home = temp_dir.path().join("home");
+        let cwd = temp_dir.path().join("project");
+        fs::create_dir_all(&cwd)?;
+        let registry_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../fixtures/registry/index.json");
+
+        write_app_config(
+            &home,
+            &AppConfig {
+                proxy: Default::default(),
+                storage: Default::default(),
+                registry: RegistryConfig {
+                    address: registry_path.display().to_string(),
+                },
+                legacy_version_file: Default::default(),
+                cache: Default::default(),
+            },
+        )?;
+
+        let app = App::new(
+            HomeLayout {
+                active_home: home.clone(),
+                migration_candidates: Vec::new(),
+            },
+            cwd.clone(),
+            Some(String::from("session")),
+        )?;
+        assert!(!app.available_plugins()?.is_empty());
+
+        write_app_config(
+            &home,
+            &AppConfig {
+                proxy: Default::default(),
+                storage: Default::default(),
+                registry: RegistryConfig {
+                    address: temp_dir
+                        .path()
+                        .join("missing/index.json")
+                        .display()
+                        .to_string(),
+                },
+                legacy_version_file: Default::default(),
+                cache: Default::default(),
+            },
+        )?;
+
+        let fallback = App::new(
+            HomeLayout {
+                active_home: home,
+                migration_candidates: Vec::new(),
+            },
+            cwd,
+            Some(String::from("session")),
+        )?;
+        let entries = fallback.available_plugins()?;
+        assert!(entries.iter().any(|entry| entry.name == "nodejs"));
+        Ok(())
+    }
+
+    #[cfg(feature = "lua")]
+    #[test]
+    fn add_plugin_should_fallback_to_cached_registry_when_refresh_fails()
+    -> Result<(), Box<dyn Error>> {
+        let temp_dir = TempDir::new()?;
+        let home = temp_dir.path().join("home");
+        let cwd = temp_dir.path().join("project");
+        fs::create_dir_all(&cwd)?;
+        let registry_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../fixtures/registry/index.json");
+
+        write_app_config(
+            &home,
+            &AppConfig {
+                proxy: Default::default(),
+                storage: Default::default(),
+                registry: RegistryConfig {
+                    address: registry_path.display().to_string(),
+                },
+                legacy_version_file: Default::default(),
+                cache: Default::default(),
+            },
+        )?;
+
+        let app = App::new(
+            HomeLayout {
+                active_home: home.clone(),
+                migration_candidates: Vec::new(),
+            },
+            cwd.clone(),
+            Some(String::from("session")),
+        )?;
+        assert!(!app.available_plugins()?.is_empty());
+
+        write_app_config(
+            &home,
+            &AppConfig {
+                proxy: Default::default(),
+                storage: Default::default(),
+                registry: RegistryConfig {
+                    address: temp_dir
+                        .path()
+                        .join("missing/index.json")
+                        .display()
+                        .to_string(),
+                },
+                legacy_version_file: Default::default(),
+                cache: Default::default(),
+            },
+        )?;
+
+        let fallback = App::new(
+            HomeLayout {
+                active_home: home,
+                migration_candidates: Vec::new(),
+            },
+            cwd,
+            Some(String::from("session")),
+        )?;
+        let entry = fallback.add_plugin(Some("nodejs"), None, None, None)?;
+        assert_eq!(entry.name, "nodejs");
+        Ok(())
+    }
+
+    #[cfg(feature = "lua")]
     fn write_lua_fixture(root: &std::path::Path) {
         if let Err(error) = fs::create_dir_all(root.join("hooks")) {
             panic!("failed to create hooks directory: {error}");
