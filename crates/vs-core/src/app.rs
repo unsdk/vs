@@ -355,6 +355,10 @@ impl App {
         for tool in &current_tools {
             let runtime_dir = self.effective_runtime_dir(tool);
             if let Some(runtime) = self.load_installed_runtime(&tool.plugin, &tool.version)? {
+                // Relocate the runtime so that env-keys point through the
+                // scope-specific symlink (e.g. .vs/sdks/nodejs) instead of the
+                // raw cache directory.
+                let runtime = runtime.relocate(&runtime_dir);
                 if let Ok(entry) = self.resolve_registry_entry(&tool.plugin) {
                     let plugin = self.load_plugin(&entry)?;
                     let env_keys = plugin.env_keys(&runtime)?;
@@ -372,7 +376,11 @@ impl App {
 
     pub(crate) fn path_with_delta(&self, delta: &EnvDelta) -> Result<String, CoreError> {
         let mut entries = delta.path_entries.clone();
-        let existing_entries = std::env::var_os("PATH")
+        // Use the original, clean PATH saved by the activation script so that
+        // previously-injected vs entries are not duplicated on each hook call.
+        let base_path = std::env::var_os("__VS_ORIG_PATH")
+            .or_else(|| std::env::var_os("PATH"));
+        let existing_entries = base_path
             .map(|paths| split_paths(&paths).collect::<Vec<_>>())
             .unwrap_or_default();
         entries.extend(existing_entries);
@@ -385,10 +393,30 @@ impl App {
     pub(crate) fn render_hook_env(&self, shell: ShellKind) -> Result<String, CoreError> {
         let delta = self.build_env()?;
         let path_value = self.path_with_delta(&delta)?;
+
+        // Determine which env-var keys the previous hook-env call exported so
+        // that we can unset any that are no longer relevant (e.g. after leaving
+        // a project directory).
+        let prev_keys: Vec<String> = std::env::var("__VS_VARS")
+            .unwrap_or_default()
+            .split(':')
+            .filter(|s| !s.is_empty())
+            .map(String::from)
+            .collect();
+        let new_keys: Vec<&str> = delta.vars.iter().map(|(k, _)| k.as_str()).collect();
+        let stale_keys: Vec<&String> = prev_keys
+            .iter()
+            .filter(|k| !new_keys.contains(&k.as_str()))
+            .collect();
+        let new_keys_joined = new_keys.join(":");
+
         let mut lines = Vec::new();
 
         match shell {
             ShellKind::Bash | ShellKind::Zsh => {
+                for key in &stale_keys {
+                    lines.push(format!("unset {key}"));
+                }
                 for (key, value) in &delta.vars {
                     lines.push(format!("export {key}='{}'", value.replace('\'', "'\"'\"'")));
                 }
@@ -396,8 +424,12 @@ impl App {
                     "export PATH='{}'",
                     path_value.replace('\'', "'\"'\"'")
                 ));
+                lines.push(format!("export __VS_VARS='{new_keys_joined}'"));
             }
             ShellKind::Fish => {
+                for key in &stale_keys {
+                    lines.push(format!("set -e {key}"));
+                }
                 for (key, value) in &delta.vars {
                     lines.push(format!("set -gx {key} '{}'", value.replace('\'', "\\'")));
                 }
@@ -405,25 +437,38 @@ impl App {
                     "set -gx PATH '{}'",
                     path_value.replace('\'', "\\'")
                 ));
+                lines.push(format!("set -gx __VS_VARS '{new_keys_joined}'"));
             }
             ShellKind::Nushell => {
+                for key in &stale_keys {
+                    lines.push(serde_json::json!({ key.as_str(): "" }).to_string());
+                }
                 for (key, value) in &delta.vars {
                     let payload = serde_json::json!({ key: value });
                     lines.push(payload.to_string());
                 }
                 lines.push(serde_json::json!({ "PATH": path_value }).to_string());
+                lines.push(serde_json::json!({ "__VS_VARS": new_keys_joined }).to_string());
             }
             ShellKind::Pwsh => {
+                for key in &stale_keys {
+                    lines.push(format!("Remove-Item Env:\\{key} -ErrorAction SilentlyContinue"));
+                }
                 for (key, value) in &delta.vars {
                     lines.push(format!("$env:{key} = '{}'", value.replace('\'', "''")));
                 }
                 lines.push(format!("$env:PATH = '{}'", path_value.replace('\'', "''")));
+                lines.push(format!("$env:__VS_VARS = '{new_keys_joined}'"));
             }
             ShellKind::Clink => {
+                for key in &stale_keys {
+                    lines.push(format!("set {key}="));
+                }
                 for (key, value) in &delta.vars {
                     lines.push(format!("set {key}={value}"));
                 }
                 lines.push(format!("set PATH={path_value}"));
+                lines.push(format!("set __VS_VARS={new_keys_joined}"));
             }
         }
 

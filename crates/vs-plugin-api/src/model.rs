@@ -179,4 +179,33 @@ impl InstalledRuntime {
     pub fn main_path(&self) -> &Path {
         &self.main.path
     }
+
+    /// Returns a copy of this runtime with all paths relocated under
+    /// `new_root` instead of the original `root_dir`.  This is used to
+    /// make env-keys point at scope-specific symlinks rather than the raw
+    /// cache directory.
+    pub fn relocate(&self, new_root: &Path) -> Self {
+        let relocate_path = |p: &Path| -> PathBuf {
+            p.strip_prefix(&self.root_dir)
+                .map(|rel| new_root.join(rel))
+                .unwrap_or_else(|_| p.to_path_buf())
+        };
+        Self {
+            plugin: self.plugin.clone(),
+            version: self.version.clone(),
+            root_dir: new_root.to_path_buf(),
+            main: InstalledArtifact {
+                path: relocate_path(&self.main.path),
+                ..self.main.clone()
+            },
+            additions: self
+                .additions
+                .iter()
+                .map(|a| InstalledArtifact {
+                    path: relocate_path(&a.path),
+                    ..a.clone()
+                })
+                .collect(),
+        }
+    }
 }

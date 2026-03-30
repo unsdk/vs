@@ -382,6 +382,10 @@ fn run_with_app(app: App, command: Commands) -> Result<i32> {
             println!("{}", app.cd_path(&args.plugin)?);
             Ok(0)
         }
+        Commands::CleanupSession => {
+            let _ = app.cleanup_session();
+            Ok(0)
+        }
         Commands::Completion(_) | Commands::Complete(_) => {
             unreachable!("completion is handled before app initialization")
         }

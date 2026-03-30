@@ -2,6 +2,7 @@ mod activate;
 mod add;
 mod available;
 mod cd;
+mod cleanup;
 mod config;
 mod current;
 mod exec;
