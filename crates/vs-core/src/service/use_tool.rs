@@ -28,14 +28,13 @@ impl App {
 
         let requested_version =
             self.resolve_requested_use_version(&*plugin, plugin_name, version)?;
-        let hook_version = plugin
-            .pre_use(
-                &requested_version,
-                scope.as_str(),
-                &self.cwd,
-                previous_version.as_deref(),
-                &installed_runtimes,
-            )?;
+        let hook_version = plugin.pre_use(
+            &requested_version,
+            scope.as_str(),
+            &self.cwd,
+            previous_version.as_deref(),
+            &installed_runtimes,
+        )?;
         let resolved_version = match hook_version {
             Some(v) => v,
             None => self.fuzzy_match_version(plugin_name, &requested_version, &installed_runtimes),
@@ -213,7 +212,7 @@ impl App {
             match scope {
                 UseScope::Global => Ok(scope),
                 _ => Err(CoreError::Unsupported(String::from(
-                    "vs requires hook support. Please ensure vs is properly initialized with `eval \"$(vs activate <shell>)\"`"
+                    "vs requires hook support. Please ensure vs is properly initialized with `eval \"$(vs activate <shell>)\"`",
                 ))),
             }
         }

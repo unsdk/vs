@@ -97,9 +97,7 @@ fn run_with_app(app: App, command: Commands) -> Result<i32> {
             Ok(0)
         }
         Commands::Remove(args) => {
-            println!(
-                "Removing this plugin will remove the installed sdk along with the plugin."
-            );
+            println!("Removing this plugin will remove the installed sdk along with the plugin.");
             if !args.yes {
                 if !should_use_interactive_tui() {
                     anyhow::bail!(
@@ -231,10 +229,7 @@ fn run_with_app(app: App, command: Commands) -> Result<i32> {
             if result.removed {
                 print_status(&format!("Uninstalled {} {}", plugin, version));
                 if let Some(switched_to) = result.auto_switched {
-                    print_status(&format!(
-                        "Auto switch to {}@{}.",
-                        plugin, switched_to
-                    ));
+                    print_status(&format!("Auto switch to {}@{}.", plugin, switched_to));
                 }
             } else {
                 print_status(&format!("{} {} was not installed", plugin, version));

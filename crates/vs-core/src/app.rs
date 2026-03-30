@@ -378,8 +378,7 @@ impl App {
         let mut entries = delta.path_entries.clone();
         // Use the original, clean PATH saved by the activation script so that
         // previously-injected vs entries are not duplicated on each hook call.
-        let base_path = std::env::var_os("__VS_ORIG_PATH")
-            .or_else(|| std::env::var_os("PATH"));
+        let base_path = std::env::var_os("__VS_ORIG_PATH").or_else(|| std::env::var_os("PATH"));
         let existing_entries = base_path
             .map(|paths| split_paths(&paths).collect::<Vec<_>>())
             .unwrap_or_default();
@@ -470,9 +469,8 @@ impl App {
             }
             ShellKind::Nushell => {
                 if orig_path_needs_export {
-                    lines.push(
-                        serde_json::json!({ "__VS_ORIG_PATH": orig_path_value }).to_string(),
-                    );
+                    lines
+                        .push(serde_json::json!({ "__VS_ORIG_PATH": orig_path_value }).to_string());
                 }
                 for key in &stale_keys {
                     lines.push(serde_json::json!({ key.as_str(): "" }).to_string());
@@ -493,7 +491,9 @@ impl App {
                     ));
                 }
                 for key in &stale_keys {
-                    lines.push(format!("Remove-Item Env:\\{key} -ErrorAction SilentlyContinue"));
+                    lines.push(format!(
+                        "Remove-Item Env:\\{key} -ErrorAction SilentlyContinue"
+                    ));
                 }
                 for (key, value) in &delta.vars {
                     lines.push(format!("$env:{key} = '{}'", value.replace('\'', "''")));
