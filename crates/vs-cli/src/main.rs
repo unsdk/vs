@@ -245,6 +245,8 @@ fn run_with_app(app: App, command: Commands) -> Result<i32> {
             let (plugin, version) = parse_tool_spec(&args.spec)?;
             let version = if let Some(version) = version {
                 version
+            } else if let Some(project_version) = app.project_tool_version_for_use(&plugin)? {
+                project_version
             } else if should_use_interactive_tui() {
                 let installed_versions = app
                     .installed_versions_for_plugin(&plugin)?

@@ -1,3 +1,7 @@
+use std::fs;
+use std::io::Write;
+use std::path::Path;
+
 use vs_plugin_api::InstalledRuntime;
 use vs_shell::{global_current_dir, link_directory, project_sdk_dir};
 
@@ -12,6 +16,9 @@ impl App {
         scope: UseScope,
         unlink: bool,
     ) -> Result<InstalledVersion, CoreError> {
+        // Verify hook environment is available (session ID proves shell hooks are loaded).
+        let scope = self.verify_hook_env(scope)?;
+
         let entry = self.resolve_registry_entry(plugin_name)?;
         let plugin = self.load_plugin(&entry)?;
         let previous_version = self
@@ -21,15 +28,19 @@ impl App {
 
         let requested_version =
             self.resolve_requested_use_version(&*plugin, plugin_name, version)?;
-        let resolved_version = plugin
+        let hook_version = plugin
             .pre_use(
                 &requested_version,
                 scope.as_str(),
                 &self.cwd,
                 previous_version.as_deref(),
                 &installed_runtimes,
-            )?
-            .unwrap_or(requested_version);
+            )?;
+        let resolved_version = match hook_version {
+            Some(v) => v,
+            None => self.fuzzy_match_version(plugin_name, &requested_version, &installed_runtimes),
+        };
+
         let runtime = self
             .load_installed_runtime(plugin_name, &resolved_version)?
             .ok_or_else(|| {
@@ -67,6 +78,7 @@ impl App {
                         &project_sdk_dir(&self.cwd, plugin_name),
                     )?;
                 }
+                ensure_vs_in_gitignore(&self.cwd);
             }
             UseScope::Session => {
                 let session_file = self.session_file()?;
@@ -74,6 +86,19 @@ impl App {
             }
         }
         Ok(installed)
+    }
+
+    /// Resolves the version from the project config file when no version is
+    /// specified on the CLI (empty string). Returns `None` when no project
+    /// config is found.
+    pub fn project_tool_version_for_use(
+        &self,
+        plugin_name: &str,
+    ) -> Result<Option<String>, CoreError> {
+        Ok(vs_config::find_project_file(&self.cwd)
+            .map(|path| vs_config::read_tool_versions(&path))
+            .transpose()?
+            .and_then(|tools| tools.tools.get(plugin_name).cloned()))
     }
 
     /// Returns installed versions for a single plugin, sorted from newest-looking to oldest-looking.
@@ -124,6 +149,101 @@ impl App {
                 ))
             })
     }
+
+    /// Fuzzy-matches a version against installed runtimes.
+    ///
+    /// 1. Exact match — return immediately.
+    /// 2. Prefix match — e.g. "20" matches "20.11.1".
+    /// 3. No match — return the original version unchanged so the caller
+    ///    produces the "not installed" error.
+    fn fuzzy_match_version(
+        &self,
+        plugin_name: &str,
+        version: &str,
+        installed_runtimes: &[InstalledRuntime],
+    ) -> String {
+        // Exact match.
+        if self
+            .load_installed_runtime(plugin_name, version)
+            .ok()
+            .flatten()
+            .is_some()
+        {
+            return version.to_string();
+        }
+
+        // Prefix match — sort installed versions and pick the first match.
+        let mut versions: Vec<&str> = installed_runtimes
+            .iter()
+            .map(|rt| rt.version.as_str())
+            .collect();
+        versions.sort();
+
+        let prefix = format!("{version}.");
+        for v in &versions {
+            if *v == version {
+                return version.to_string();
+            }
+            if v.starts_with(&prefix) {
+                return (*v).to_string();
+            }
+        }
+
+        version.to_string()
+    }
+
+    /// Verifies the hook environment is available.
+    ///
+    /// On Unix, session scope and project scope require shell hooks to be
+    /// loaded (indicated by `VS_SESSION_ID`). On Windows without hooks the
+    /// scope is silently promoted to Global.
+    fn verify_hook_env(&self, scope: UseScope) -> Result<UseScope, CoreError> {
+        if self.session_id.is_some() {
+            return Ok(scope);
+        }
+        // No session ID — hooks are not loaded.
+        if cfg!(windows) {
+            if scope != UseScope::Global {
+                eprintln!(
+                    "Warning: The current shell lacks hook support. Switching to global scope automatically."
+                );
+            }
+            Ok(UseScope::Global)
+        } else {
+            match scope {
+                UseScope::Global => Ok(scope),
+                _ => Err(CoreError::Unsupported(String::from(
+                    "vs requires hook support. Please ensure vs is properly initialized with `eval \"$(vs activate <shell>)\"`"
+                ))),
+            }
+        }
+    }
+}
+
+/// If a `.gitignore` exists in `project_dir` and does not already mention
+/// `.vs/` or `.vs`, appends `.vs/` to it.
+fn ensure_vs_in_gitignore(project_dir: &Path) {
+    let gitignore_path = project_dir.join(".gitignore");
+    let Ok(content) = fs::read_to_string(&gitignore_path) else {
+        return; // no .gitignore — don't create one
+    };
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed == ".vs/" || trimmed == ".vs" {
+            return; // already present
+        }
+    }
+
+    let Ok(mut file) = fs::OpenOptions::new().append(true).open(&gitignore_path) else {
+        return;
+    };
+    let entry = if content.ends_with('\n') || content.is_empty() {
+        ".vs/\n"
+    } else {
+        "\n.vs/\n"
+    };
+    let _ = file.write_all(entry.as_bytes());
 }
 
 #[cfg(test)]
