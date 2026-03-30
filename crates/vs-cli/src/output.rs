@@ -1,14 +1,18 @@
+//! Formatting helpers for human-readable CLI output.
+
 use std::collections::BTreeMap;
 
 use vs_core::{CurrentTool, InstalledVersion, PluginInfo};
 use vs_plugin_api::{AvailableVersion, PluginBackendKind};
 use vs_registry::RegistryEntry;
 
+/// Prints a section heading followed by a blank line.
 pub fn print_heading(title: &str) {
     println!("{title}");
     println!();
 }
 
+/// Renders the plugins available from the configured registries.
 pub fn print_available_plugins(entries: &[RegistryEntry]) {
     print_heading("AVAILABLE PLUGINS");
     let name_width = entries
@@ -32,6 +36,7 @@ pub fn print_available_plugins(entries: &[RegistryEntry]) {
     }
 }
 
+/// Renders detailed metadata for a single plugin manifest.
 pub fn print_plugin_info(info: &PluginInfo) {
     println!("Plugin Info:");
     println!("Name     -> {}", info.manifest.name);
@@ -55,6 +60,7 @@ pub fn print_plugin_info(info: &PluginInfo) {
     }
 }
 
+/// Renders search results for a plugin and marks versions that are already installed.
 pub fn print_search_versions(
     plugin: &str,
     versions: &[AvailableVersion],
@@ -77,6 +83,7 @@ pub fn print_search_versions(
     }
 }
 
+/// Prints the currently selected version for a plugin.
 pub fn print_current_tool(current: Option<&CurrentTool>, plugin: &str) {
     if let Some(current) = current {
         println!("-> v{}", current.version);
@@ -85,6 +92,7 @@ pub fn print_current_tool(current: Option<&CurrentTool>, plugin: &str) {
     }
 }
 
+/// Prints installed versions grouped by plugin and marks the active version.
 pub fn print_installed_versions(installed: &[InstalledVersion], current_tools: &[CurrentTool]) {
     if installed.is_empty() {
         return;
@@ -116,6 +124,7 @@ pub fn print_installed_versions(installed: &[InstalledVersion], current_tools: &
     }
 }
 
+/// Prints the selected version for each configured plugin.
 pub fn print_current_statuses(statuses: &[(String, Option<String>)]) {
     for (plugin, version) in statuses {
         if let Some(version) = version {
@@ -126,10 +135,12 @@ pub fn print_current_statuses(statuses: &[(String, Option<String>)]) {
     }
 }
 
+/// Prints a single status line.
 pub fn print_status(message: &str) {
     println!("{message}");
 }
 
+/// Builds the label shown for an available plugin version.
 pub fn version_label(version: &AvailableVersion) -> String {
     let note_suffix = version
         .note
@@ -158,6 +169,7 @@ pub fn version_label(version: &AvailableVersion) -> String {
     format!("{}{}{}", version.version, note_suffix, additions_suffix)
 }
 
+/// Returns the stable CLI label used for a plugin backend.
 pub fn backend_label(backend: PluginBackendKind) -> &'static str {
     match backend {
         PluginBackendKind::Lua => "lua",

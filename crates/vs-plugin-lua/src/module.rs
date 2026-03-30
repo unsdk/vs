@@ -1,3 +1,5 @@
+//! Built-in Lua modules that emulate the helper APIs expected by vfox-compatible plugins.
+
 use std::collections::BTreeMap;
 use std::fs;
 use std::io::Cursor;
@@ -105,6 +107,7 @@ impl UserData for HtmlSelection {
         });
         methods.add_method("each", |_lua, this, callback: mlua::Function| {
             for (index, fragment) in this.fragments.iter().enumerate() {
+                // Lua arrays are 1-based, so expose indices the same way.
                 callback
                     .call::<()>((index + 1, HtmlSelection::new(vec![fragment.clone()], false)))
                     .map_err(|error| mlua::Error::external(error.to_string()))?;
@@ -121,6 +124,11 @@ struct HttpRequest {
     headers: BTreeMap<String, String>,
 }
 
+/// Registers the built-in compatibility modules exposed to Lua plugins.
+///
+/// # Errors
+///
+/// Returns an error when the Lua `package.preload` table cannot be populated.
 pub fn register_builtin_modules(lua: &Lua, user_agent: &str) -> Result<(), PluginError> {
     let globals = lua.globals();
     let package: Table = globals
@@ -165,6 +173,11 @@ pub fn register_builtin_modules(lua: &Lua, user_agent: &str) -> Result<(), Plugi
     Ok(())
 }
 
+/// Prepends plugin-local hook and library directories to `package.path`.
+///
+/// # Errors
+///
+/// Returns an error when the Lua `package` table cannot be read or updated.
 pub fn set_package_paths(lua: &Lua, plugin_root: &Path) -> Result<(), PluginError> {
     let globals = lua.globals();
     let package: Table = globals
@@ -176,6 +189,7 @@ pub fn set_package_paths(lua: &Lua, plugin_root: &Path) -> Result<(), PluginErro
 
     let hook_path = plugin_root.join("hooks").join("?.lua");
     let lib_path = plugin_root.join("lib").join("?.lua");
+    // Prepend plugin-local paths so helper modules override any broader Lua search path entries.
     let new_path = format!(
         "{};{};{}",
         hook_path.display(),
@@ -393,6 +407,7 @@ fn decompress_archive(archive_path: &Path, destination: &Path) -> Result<(), Str
         let mut archive = ZipArchive::new(Cursor::new(bytes)).map_err(|error| error.to_string())?;
         for index in 0..archive.len() {
             let mut file = archive.by_index(index).map_err(|error| error.to_string())?;
+            // Ignore entries with path traversal components before joining them to the destination.
             let Some(relative_path) = file.enclosed_name() else {
                 continue;
             };
@@ -432,6 +447,8 @@ fn decompress_archive(archive_path: &Path, destination: &Path) -> Result<(), Str
     Err(String::from("unsupported archive format"))
 }
 
+// `scraper` expects fragments to have valid parent elements, so wrap table-specific fragments
+// into the smallest compatible document shape before running selectors against them.
 fn parse_wrapped_fragment(fragment: &str) -> Html {
     let wrapped = wrap_fragment(fragment);
     Html::parse_fragment(&wrapped)

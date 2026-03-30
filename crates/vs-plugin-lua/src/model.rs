@@ -1,8 +1,11 @@
+//! Types exchanged between Lua hooks and the Rust host runtime.
+
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 use vs_plugin_api::{AvailableAddition, AvailableVersion, InstalledRuntime, PluginManifest};
 
+/// Metadata extracted from a Lua plugin's top-level table.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MetadataFile {
@@ -27,6 +30,7 @@ pub struct MetadataFile {
     pub legacy_filenames: Vec<String>,
 }
 
+/// Context passed to the `Available` hook.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AvailableHookCtx {
@@ -34,6 +38,7 @@ pub struct AvailableHookCtx {
     pub runtime_version: &'static str,
 }
 
+/// One version candidate returned by the `Available` hook.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AvailableHookResultItem {
@@ -44,6 +49,7 @@ pub struct AvailableHookResultItem {
     pub addition: Vec<AvailableAdditionItem>,
 }
 
+/// Additional artifact metadata nested under an available version.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AvailableAdditionItem {
@@ -72,6 +78,7 @@ impl From<AvailableHookResultItem> for AvailableVersion {
     }
 }
 
+/// Context passed to the `PreInstall` hook for a requested version.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PreInstallHookCtx<'a> {
@@ -79,6 +86,7 @@ pub struct PreInstallHookCtx<'a> {
     pub runtime_version: &'static str,
 }
 
+/// Install metadata returned by the `PreInstall` hook.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PreInstallHookResult {
@@ -104,6 +112,7 @@ pub struct PreInstallHookResult {
     pub addition: Vec<PreInstallAdditionItem>,
 }
 
+/// Additional install artifact returned by the `PreInstall` hook.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PreInstallAdditionItem {
@@ -126,6 +135,7 @@ pub struct PreInstallAdditionItem {
     pub md5: Option<String>,
 }
 
+/// Serializable view of an installed package exposed back to Lua hooks.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InstalledPackageItem {
@@ -136,6 +146,7 @@ pub struct InstalledPackageItem {
     pub note: Option<String>,
 }
 
+/// Context passed to the `EnvKeys` hook.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EnvKeysHookCtx {
@@ -145,12 +156,14 @@ pub struct EnvKeysHookCtx {
     pub runtime_version: &'static str,
 }
 
+/// A single environment variable emitted by the `EnvKeys` hook.
 #[derive(Debug, Deserialize)]
 pub struct EnvKeysHookResultItem {
     pub key: String,
     pub value: String,
 }
 
+/// Context passed to the optional `PostInstall` hook.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PostInstallHookCtx {
@@ -159,6 +172,7 @@ pub struct PostInstallHookCtx {
     pub runtime_version: &'static str,
 }
 
+/// Context passed to the optional `PreUse` hook.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PreUseHookCtx {
@@ -171,11 +185,13 @@ pub struct PreUseHookCtx {
     pub runtime_version: &'static str,
 }
 
+/// Result returned by the optional `PreUse` hook.
 #[derive(Debug, Deserialize)]
 pub struct PreUseHookResult {
     pub version: String,
 }
 
+/// Builds the name-keyed package map exposed to Lua hooks.
 pub fn build_installed_package_map(
     runtime: &InstalledRuntime,
 ) -> BTreeMap<String, InstalledPackageItem> {
@@ -203,6 +219,7 @@ pub fn build_installed_package_map(
     packages
 }
 
+/// Converts deserialized Lua metadata into a [`PluginManifest`].
 pub fn build_manifest(metadata: MetadataFile, source: &std::path::Path) -> PluginManifest {
     PluginManifest {
         name: metadata.name,
