@@ -409,10 +409,7 @@ fn extract_zip(bytes: &[u8], target_path: &Path) -> Result<(), InstallerError> {
         let Some(relative_path) = file.enclosed_name() else {
             continue;
         };
-        let Some(stripped_path) = strip_archive_root(&relative_path) else {
-            continue;
-        };
-        let output_path = target_path.join(stripped_path);
+        let output_path = target_path.join(relative_path);
         if file.name().ends_with('/') {
             fs::create_dir_all(&output_path)?;
             continue;
@@ -423,6 +420,7 @@ fn extract_zip(bytes: &[u8], target_path: &Path) -> Result<(), InstallerError> {
         let mut output = fs::File::create(output_path)?;
         std::io::copy(&mut file, &mut output)?;
     }
+    flatten_extracted_root(target_path)?;
     Ok(())
 }
 
@@ -452,26 +450,52 @@ fn extract_tar_archive<R: Read>(
 ) -> Result<(), InstallerError> {
     for entry in archive.entries()? {
         let mut entry = entry?;
-        let path = entry.path()?;
-        let Some(stripped_path) = strip_archive_root(&path) else {
-            continue;
-        };
-        let output_path = target_path.join(stripped_path);
-        if let Some(parent) = output_path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-        entry.unpack(output_path)?;
+        entry.unpack_in(target_path)?;
     }
+    flatten_extracted_root(target_path)?;
     Ok(())
 }
 
-fn strip_archive_root(path: &Path) -> Option<PathBuf> {
-    let mut components = path.components();
-    components.next()?;
-    let stripped = components.as_path();
-    if stripped.as_os_str().is_empty() {
-        None
-    } else {
-        Some(stripped.to_path_buf())
+fn flatten_extracted_root(target_path: &Path) -> Result<(), InstallerError> {
+    let mut entries = fs::read_dir(target_path)?.collect::<Result<Vec<_>, _>>()?;
+    if entries.len() != 1 {
+        return Ok(());
     }
+
+    let root = entries.swap_remove(0);
+    if !root.file_type()?.is_dir() {
+        return Ok(());
+    }
+
+    let root_path = root.path();
+    let root_name = root.file_name();
+    if !should_flatten_archive_root(root_name.to_string_lossy().as_ref()) {
+        return Ok(());
+    }
+
+    for child in fs::read_dir(&root_path)? {
+        let child = child?;
+        let destination = target_path.join(child.file_name());
+        fs::rename(child.path(), destination)?;
+    }
+    fs::remove_dir(&root_path)?;
+    Ok(())
+}
+
+fn should_flatten_archive_root(root_name: &str) -> bool {
+    !matches!(
+        root_name,
+        "bin"
+            | "lib"
+            | "lib64"
+            | "include"
+            | "share"
+            | "etc"
+            | "usr"
+            | "opt"
+            | "Scripts"
+            | "script"
+            | "cmd"
+            | "completions"
+    )
 }

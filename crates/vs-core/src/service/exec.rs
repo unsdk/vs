@@ -1,6 +1,7 @@
 //! Services for executing commands with resolved runtime environments.
 
 use std::env::split_paths;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -135,7 +136,7 @@ fn resolve_command_path(command: &str, preferred_paths: &[PathBuf]) -> Option<Pa
     {
         for directory in search_paths {
             let candidate = directory.join(command);
-            if candidate.is_file() {
+            if is_executable_file(&candidate) {
                 return Some(candidate);
             }
         }
@@ -152,6 +153,21 @@ fn apply_exec_env_keys(delta: &mut EnvDelta, env_keys: Vec<vs_plugin_api::EnvKey
             delta.vars.push((env_key.key, env_key.value));
         }
     }
+}
+
+#[cfg(unix)]
+fn is_executable_file(path: &Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+
+    path.is_file()
+        && fs::metadata(path)
+            .map(|metadata| metadata.permissions().mode() & 0o111 != 0)
+            .unwrap_or(false)
+}
+
+#[cfg(not(unix))]
+fn is_executable_file(path: &Path) -> bool {
+    path.is_file()
 }
 
 #[cfg(test)]
@@ -188,9 +204,15 @@ mod tests {
 
         #[cfg(windows)]
         fs::write(&preferred_script, "fixture preferred script")?;
+        #[cfg(not(windows))]
+        make_executable(&preferred_binary, b"#!/bin/sh\necho preferred\n")?;
+        #[cfg(windows)]
         fs::write(&preferred_binary, "fixture preferred")?;
         #[cfg(windows)]
         fs::write(&fallback_script, "fixture fallback script")?;
+        #[cfg(not(windows))]
+        make_executable(&fallback_binary, b"#!/bin/sh\necho fallback\n")?;
+        #[cfg(windows)]
         fs::write(&fallback_binary, "fixture fallback")?;
 
         let resolved = resolve_command_path("node", &[preferred, fallback])
@@ -213,5 +235,35 @@ mod tests {
     #[cfg(not(windows))]
     fn assert_path_matches(actual: &Path, expected: &Path) {
         assert_eq!(actual, expected);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn resolve_command_path_should_skip_non_executable_candidates() -> Result<(), Box<dyn Error>> {
+        let temp_dir = TempDir::new()?;
+        let preferred = temp_dir.path().join("preferred");
+        let fallback = temp_dir.path().join("fallback");
+        fs::create_dir_all(&preferred)?;
+        fs::create_dir_all(&fallback)?;
+
+        fs::write(preferred.join("node"), "not executable")?;
+        make_executable(&fallback.join("node"), b"#!/bin/sh\necho fallback\n")?;
+
+        let resolved = resolve_command_path("node", &[preferred, fallback])
+            .ok_or_else(|| std::io::Error::other("missing resolved command"))?;
+
+        assert_eq!(resolved, temp_dir.path().join("fallback/node"));
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    fn make_executable(path: &Path, contents: &[u8]) -> Result<(), Box<dyn Error>> {
+        use std::os::unix::fs::PermissionsExt;
+
+        fs::write(path, contents)?;
+        let mut permissions = fs::metadata(path)?.permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(path, permissions)?;
+        Ok(())
     }
 }

@@ -33,4 +33,11 @@ mod tests {
         assert!(script.contains("vs __hook-env bash"));
         assert!(script.contains("VS_SESSION_ID"));
     }
+
+    #[test]
+    fn nushell_activation_should_handle_unset_markers() {
+        let script = render_activation(ShellKind::Nushell);
+        assert!(script.contains("__VS_UNSET"));
+        assert!(script.contains("hide-env"));
+    }
 }

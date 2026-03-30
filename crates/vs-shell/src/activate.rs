@@ -95,7 +95,14 @@ end
         ShellKind::Nushell => String::from(
             r#"$env.VS_SESSION_ID = $"($nu.pid)"
 def --env __vs_activate [] {
-  vs __hook-env nushell | lines | each {|line| load-env ($line | from json) }
+  vs __hook-env nushell | lines | each {|line|
+    let payload = ($line | from json)
+    if (($payload | columns | any {|name| $name == "__VS_UNSET"})) {
+      hide-env $payload.__VS_UNSET
+    } else {
+      load-env $payload
+    }
+  }
 }
 do -i { ^vs __cleanup-stale-sessions }
 __vs_activate

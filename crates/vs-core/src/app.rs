@@ -392,14 +392,6 @@ impl App {
     }
 
     pub(crate) fn render_hook_env(&self, shell: ShellKind) -> Result<String, CoreError> {
-        // Fast path: if the state hash has not changed since the last call,
-        // all environment variables are already correct in the shell.
-        let state_hash = self.compute_state_hash();
-        let prev_hash = std::env::var("__VS_STATE_HASH").unwrap_or_default();
-        if !prev_hash.is_empty() && state_hash == prev_hash {
-            return Ok(String::new());
-        }
-
         // On the very first call __VS_ORIG_PATH is not yet set.  Capture the
         // current (clean) PATH so we can freeze it as __VS_ORIG_PATH.
         let orig_path_needs_export = std::env::var_os("__VS_ORIG_PATH").is_none();
@@ -409,6 +401,11 @@ impl App {
 
         let delta = self.build_env()?;
         let path_value = self.path_with_delta(&delta)?;
+        let state_hash = compute_env_state_hash(&delta, &path_value);
+        let prev_hash = std::env::var("__VS_STATE_HASH").unwrap_or_default();
+        if !prev_hash.is_empty() && state_hash == prev_hash {
+            return Ok(String::new());
+        }
 
         // Determine which env-var keys the previous hook-env call exported so
         // that we can unset any that are no longer relevant (e.g. after leaving
@@ -419,142 +416,16 @@ impl App {
             .filter(|s| !s.is_empty())
             .map(String::from)
             .collect();
-        let new_keys: Vec<&str> = delta.vars.iter().map(|(k, _)| k.as_str()).collect();
-        let stale_keys: Vec<&String> = prev_keys
-            .iter()
-            .filter(|k| !new_keys.contains(&k.as_str()))
-            .collect();
-        let new_keys_joined = new_keys.join(":");
-
-        let mut lines = Vec::new();
-
-        match shell {
-            ShellKind::Bash | ShellKind::Zsh => {
-                if orig_path_needs_export {
-                    lines.push(format!(
-                        "export __VS_ORIG_PATH='{}'",
-                        orig_path_value.replace('\'', "'\"'\"'")
-                    ));
-                }
-                for key in &stale_keys {
-                    lines.push(format!("unset {key}"));
-                }
-                for (key, value) in &delta.vars {
-                    lines.push(format!("export {key}='{}'", value.replace('\'', "'\"'\"'")));
-                }
-                lines.push(format!(
-                    "export PATH='{}'",
-                    path_value.replace('\'', "'\"'\"'")
-                ));
-                lines.push(format!("export __VS_VARS='{new_keys_joined}'"));
-                lines.push(format!("export __VS_STATE_HASH='{state_hash}'"));
-            }
-            ShellKind::Fish => {
-                if orig_path_needs_export {
-                    lines.push(format!(
-                        "set -gx __VS_ORIG_PATH '{}'",
-                        orig_path_value.replace('\'', "\\'")
-                    ));
-                }
-                for key in &stale_keys {
-                    lines.push(format!("set -e {key}"));
-                }
-                for (key, value) in &delta.vars {
-                    lines.push(format!("set -gx {key} '{}'", value.replace('\'', "\\'")));
-                }
-                lines.push(format!(
-                    "set -gx PATH '{}'",
-                    path_value.replace('\'', "\\'")
-                ));
-                lines.push(format!("set -gx __VS_VARS '{new_keys_joined}'"));
-                lines.push(format!("set -gx __VS_STATE_HASH '{state_hash}'"));
-            }
-            ShellKind::Nushell => {
-                if orig_path_needs_export {
-                    lines
-                        .push(serde_json::json!({ "__VS_ORIG_PATH": orig_path_value }).to_string());
-                }
-                for key in &stale_keys {
-                    lines.push(serde_json::json!({ key.as_str(): "" }).to_string());
-                }
-                for (key, value) in &delta.vars {
-                    let payload = serde_json::json!({ key: value });
-                    lines.push(payload.to_string());
-                }
-                lines.push(serde_json::json!({ "PATH": path_value }).to_string());
-                lines.push(serde_json::json!({ "__VS_VARS": new_keys_joined }).to_string());
-                lines.push(serde_json::json!({ "__VS_STATE_HASH": state_hash }).to_string());
-            }
-            ShellKind::Pwsh => {
-                if orig_path_needs_export {
-                    lines.push(format!(
-                        "$env:__VS_ORIG_PATH = '{}'",
-                        orig_path_value.replace('\'', "''")
-                    ));
-                }
-                for key in &stale_keys {
-                    lines.push(format!(
-                        "Remove-Item Env:\\{key} -ErrorAction SilentlyContinue"
-                    ));
-                }
-                for (key, value) in &delta.vars {
-                    lines.push(format!("$env:{key} = '{}'", value.replace('\'', "''")));
-                }
-                lines.push(format!("$env:PATH = '{}'", path_value.replace('\'', "''")));
-                lines.push(format!("$env:__VS_VARS = '{new_keys_joined}'"));
-                lines.push(format!("$env:__VS_STATE_HASH = '{state_hash}'"));
-            }
-            ShellKind::Clink => {
-                if orig_path_needs_export {
-                    lines.push(format!("set __VS_ORIG_PATH={orig_path_value}"));
-                }
-                for key in &stale_keys {
-                    lines.push(format!("set {key}="));
-                }
-                for (key, value) in &delta.vars {
-                    lines.push(format!("set {key}={value}"));
-                }
-                lines.push(format!("set PATH={path_value}"));
-                lines.push(format!("set __VS_VARS={new_keys_joined}"));
-                lines.push(format!("set __VS_STATE_HASH={state_hash}"));
-            }
-        }
-
-        Ok(lines.join("\n"))
-    }
-
-    /// Computes a hash over the inputs that affect hook-env output.
-    ///
-    /// When this hash matches `__VS_STATE_HASH` from the shell environment,
-    /// the hook can return immediately without recalculating.
-    fn compute_state_hash(&self) -> String {
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
-
-        let mut hasher = DefaultHasher::new();
-
-        // CWD path.
-        self.cwd.hash(&mut hasher);
-
-        // CWD directory mtime — changes when files are created/deleted in it,
-        // catching new project config or legacy version files.
-        hash_file_mtime(&mut hasher, &self.cwd);
-
-        // Config file mtimes.
-        hash_file_mtime(&mut hasher, &global_tools_file(self.home()));
-
-        if let Some(path) = find_project_file(&self.cwd) {
-            hash_file_mtime(&mut hasher, &path);
-        }
-        if let Some(path) = find_legacy_file(&self.cwd) {
-            hash_file_mtime(&mut hasher, &path);
-        }
-        if let Some(session_id) = &self.session_id {
-            let session_path = session_tools_file(self.home(), session_id);
-            hash_file_mtime(&mut hasher, &session_path);
-        }
-
-        format!("{:x}", hasher.finish())
+        Ok(render_shell_env_lines(
+            shell,
+            orig_path_needs_export,
+            &orig_path_value,
+            &prev_keys,
+            &delta,
+            &path_value,
+            &state_hash,
+        )
+        .join("\n"))
     }
 
     pub(crate) fn preferred_project_file(&self) -> PathBuf {
@@ -603,13 +474,173 @@ fn apply_env_keys(delta: &mut EnvDelta, env_keys: Vec<EnvKey>) {
     }
 }
 
-fn hash_file_mtime(hasher: &mut impl std::hash::Hasher, path: &Path) {
-    use std::hash::Hash;
-    if let Ok(meta) = fs::metadata(path) {
-        if let Ok(mtime) = meta.modified() {
-            if let Ok(duration) = mtime.duration_since(std::time::UNIX_EPOCH) {
-                duration.as_nanos().hash(hasher);
+fn compute_env_state_hash(delta: &EnvDelta, path_value: &str) -> String {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    let mut hasher = DefaultHasher::new();
+    path_value.hash(&mut hasher);
+    delta.vars.hash(&mut hasher);
+    delta.path_entries.hash(&mut hasher);
+    format!("{:x}", hasher.finish())
+}
+
+fn render_shell_env_lines(
+    shell: ShellKind,
+    orig_path_needs_export: bool,
+    orig_path_value: &str,
+    prev_keys: &[String],
+    delta: &EnvDelta,
+    path_value: &str,
+    state_hash: &str,
+) -> Vec<String> {
+    let new_keys: Vec<&str> = delta.vars.iter().map(|(key, _)| key.as_str()).collect();
+    let stale_keys: Vec<&String> = prev_keys
+        .iter()
+        .filter(|key| !new_keys.contains(&key.as_str()))
+        .collect();
+    let new_keys_joined = new_keys.join(":");
+    let mut lines = Vec::new();
+
+    match shell {
+        ShellKind::Bash | ShellKind::Zsh => {
+            if orig_path_needs_export {
+                lines.push(format!(
+                    "export __VS_ORIG_PATH='{}'",
+                    orig_path_value.replace('\'', "'\"'\"'")
+                ));
             }
+            for key in &stale_keys {
+                lines.push(format!("unset {key}"));
+            }
+            for (key, value) in &delta.vars {
+                lines.push(format!("export {key}='{}'", value.replace('\'', "'\"'\"'")));
+            }
+            lines.push(format!(
+                "export PATH='{}'",
+                path_value.replace('\'', "'\"'\"'")
+            ));
+            lines.push(format!("export __VS_VARS='{new_keys_joined}'"));
+            lines.push(format!("export __VS_STATE_HASH='{state_hash}'"));
         }
+        ShellKind::Fish => {
+            if orig_path_needs_export {
+                lines.push(format!(
+                    "set -gx __VS_ORIG_PATH '{}'",
+                    orig_path_value.replace('\'', "\\'")
+                ));
+            }
+            for key in &stale_keys {
+                lines.push(format!("set -e {key}"));
+            }
+            for (key, value) in &delta.vars {
+                lines.push(format!("set -gx {key} '{}'", value.replace('\'', "\\'")));
+            }
+            lines.push(format!(
+                "set -gx PATH '{}'",
+                path_value.replace('\'', "\\'")
+            ));
+            lines.push(format!("set -gx __VS_VARS '{new_keys_joined}'"));
+            lines.push(format!("set -gx __VS_STATE_HASH '{state_hash}'"));
+        }
+        ShellKind::Nushell => {
+            if orig_path_needs_export {
+                lines.push(serde_json::json!({ "__VS_ORIG_PATH": orig_path_value }).to_string());
+            }
+            for key in &stale_keys {
+                lines.push(serde_json::json!({ "__VS_UNSET": key }).to_string());
+            }
+            for (key, value) in &delta.vars {
+                lines.push(serde_json::json!({ key: value }).to_string());
+            }
+            lines.push(serde_json::json!({ "PATH": path_value }).to_string());
+            lines.push(serde_json::json!({ "__VS_VARS": new_keys_joined }).to_string());
+            lines.push(serde_json::json!({ "__VS_STATE_HASH": state_hash }).to_string());
+        }
+        ShellKind::Pwsh => {
+            if orig_path_needs_export {
+                lines.push(format!(
+                    "$env:__VS_ORIG_PATH = '{}'",
+                    orig_path_value.replace('\'', "''")
+                ));
+            }
+            for key in &stale_keys {
+                lines.push(format!(
+                    "Remove-Item Env:\\{key} -ErrorAction SilentlyContinue"
+                ));
+            }
+            for (key, value) in &delta.vars {
+                lines.push(format!("$env:{key} = '{}'", value.replace('\'', "''")));
+            }
+            lines.push(format!("$env:PATH = '{}'", path_value.replace('\'', "''")));
+            lines.push(format!("$env:__VS_VARS = '{new_keys_joined}'"));
+            lines.push(format!("$env:__VS_STATE_HASH = '{state_hash}'"));
+        }
+        ShellKind::Clink => {
+            if orig_path_needs_export {
+                lines.push(format!("set __VS_ORIG_PATH={orig_path_value}"));
+            }
+            for key in &stale_keys {
+                lines.push(format!("set {key}="));
+            }
+            for (key, value) in &delta.vars {
+                lines.push(format!("set {key}={value}"));
+            }
+            lines.push(format!("set PATH={path_value}"));
+            lines.push(format!("set __VS_VARS={new_keys_joined}"));
+            lines.push(format!("set __VS_STATE_HASH={state_hash}"));
+        }
+    }
+
+    lines
+}
+
+#[cfg(test)]
+mod tests {
+    use vs_shell::{EnvDelta, ShellKind};
+
+    use super::{compute_env_state_hash, render_shell_env_lines};
+
+    #[test]
+    fn env_state_hash_should_change_when_env_changes() {
+        let first = compute_env_state_hash(
+            &EnvDelta {
+                vars: vec![(String::from("NODEJS_HOME"), String::from("/a"))],
+                path_entries: Vec::new(),
+            },
+            "/a/bin:/usr/bin",
+        );
+        let second = compute_env_state_hash(
+            &EnvDelta {
+                vars: vec![(String::from("NODEJS_HOME"), String::from("/b"))],
+                path_entries: Vec::new(),
+            },
+            "/b/bin:/usr/bin",
+        );
+
+        assert_ne!(first, second);
+    }
+
+    #[test]
+    fn nushell_rendering_should_emit_unset_markers_for_stale_vars() {
+        let lines = render_shell_env_lines(
+            ShellKind::Nushell,
+            false,
+            "",
+            &[String::from("OLD_HOME"), String::from("KEEP_HOME")],
+            &EnvDelta {
+                vars: vec![(String::from("KEEP_HOME"), String::from("/tool"))],
+                path_entries: Vec::new(),
+            },
+            "/tool/bin:/usr/bin",
+            "hash",
+        );
+
+        assert!(
+            lines
+                .iter()
+                .any(|line| line.contains("\"__VS_UNSET\":\"OLD_HOME\""))
+        );
+        assert!(!lines.iter().any(|line| line.contains("\"OLD_HOME\":\"\"")));
     }
 }
