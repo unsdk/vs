@@ -8,6 +8,7 @@ repository.workspace = true
 homepage.workspace = true
 description = "Core orchestration services for the vs version manager."
 readme = "README.md"
+build = "build.rs"
 
 [features]
 default = ["full"]

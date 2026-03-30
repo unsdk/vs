@@ -83,6 +83,19 @@ pub struct MigrateSummary {
     pub copied_roots: usize,
 }
 
+/// Version and build metadata for the current `vs` binary.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VersionInfo {
+    /// Currently running version.
+    pub current_version: String,
+    /// Build target triple compiled into the current binary.
+    pub build_target: String,
+    /// Release variant compiled into the current binary.
+    pub build_variant: String,
+    /// Release archive extension expected for this binary.
+    pub archive_extension: String,
+}
+
 /// Summary for a self-upgrade operation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SelfUpgradeSummary {

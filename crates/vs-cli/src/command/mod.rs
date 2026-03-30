@@ -21,6 +21,7 @@ mod unuse;
 mod update;
 mod upgrade;
 mod use_tool;
+mod version;
 
 pub use activate::ActivateArgs;
 pub use add::{AddArgs, BackendArg};
@@ -43,3 +44,4 @@ pub use unuse::UnuseArgs;
 pub use update::UpdateArgs;
 pub use upgrade::UpgradeArgs;
 pub use use_tool::UseArgs;
+pub use version::VersionArgs;

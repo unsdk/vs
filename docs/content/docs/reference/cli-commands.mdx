@@ -128,6 +128,7 @@ Like `vs use`, `vs unuse` defaults to session scope when no explicit scope flag 
 ### Inspection commands
 
 ```bash
+vs version
 vs current
 vs current nodejs
 vs list
@@ -141,6 +142,7 @@ vs cd nodejs --plugin
 
 Notes:
 
+- `vs version` prints the running version plus the build target, release variant, and expected release archive type for the current binary.
 - `vs info` supports `-f/--format` for placeholder-based output formatting.
 - `vs cd` prints a path in non-interactive mode and can open an interactive shell when a TTY UI is available.
 - `vs cd nodejs --plugin` resolves the plugin source directory instead of the active runtime directory.

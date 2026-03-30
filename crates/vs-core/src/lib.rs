@@ -11,7 +11,7 @@ pub use app::App;
 pub use error::CoreError;
 pub use models::{
     CurrentTool, InstalledVersion, MigrateSummary, PluginInfo, SelfUpgradeSummary, UninstallResult,
-    UseScope,
+    UseScope, VersionInfo,
 };
 
 #[cfg(test)]

@@ -5,7 +5,7 @@ use clap::{CommandFactory, Parser, Subcommand};
 use crate::command::{
     ActivateArgs, AddArgs, AvailableArgs, CdArgs, CompletionArgs, ConfigArgs, CurrentArgs,
     ExecArgs, HookEnvArgs, InfoArgs, InstallArgs, ListArgs, MigrateArgs, RemoveArgs, ResolveArgs,
-    SearchArgs, UninstallArgs, UnuseArgs, UpdateArgs, UpgradeArgs, UseArgs,
+    SearchArgs, UninstallArgs, UnuseArgs, UpdateArgs, UpgradeArgs, UseArgs, VersionArgs,
 };
 
 /// `vs` command line interface.
@@ -43,6 +43,7 @@ pub enum Commands {
     #[command(visible_alias = "c")]
     Current(CurrentArgs),
     Config(ConfigArgs),
+    Version(VersionArgs),
     Cd(CdArgs),
     Upgrade(UpgradeArgs),
     Activate(ActivateArgs),

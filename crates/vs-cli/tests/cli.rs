@@ -259,6 +259,24 @@ fn cli_help_should_be_english() {
     assert!(text.contains("activate"));
 }
 
+#[test]
+fn cli_version_should_print_build_metadata() {
+    let temp_dir = temp_workspace();
+    let home = temp_dir.path().join("home");
+    let project = temp_dir.path().join("project");
+    if let Err(error) = fs::create_dir_all(&project) {
+        panic!("failed to create project directory: {error}");
+    }
+
+    let output = run(&home, &project, &["version"]);
+    let text = output_text(&output);
+    assert_success(output);
+    assert!(text.contains(&format!("Version: v{}", env!("CARGO_PKG_VERSION"))));
+    assert!(text.contains("Build target: "));
+    assert!(text.contains("Build variant: "));
+    assert!(text.contains("Release archive: ."));
+}
+
 fn assert_success(output: std::process::Output) {
     assert!(
         output.status.success(),

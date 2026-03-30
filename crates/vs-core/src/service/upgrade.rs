@@ -3,7 +3,6 @@
 use std::fs;
 use std::io::{Cursor, Read};
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use flate2::read::GzDecoder;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -13,6 +12,7 @@ use tar::Archive;
 use tempfile::Builder;
 use zip::ZipArchive;
 
+use super::version::{release_archive_extension, release_feature_label, release_target_triple};
 use crate::{App, CoreError, SelfUpgradeSummary};
 
 const RELEASE_REPOSITORY: &str = "unsdk/vs";
@@ -30,16 +30,10 @@ struct ReleaseAsset {
     browser_download_url: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum LinuxLibc {
-    Gnu,
-    Musl,
-}
-
 impl App {
     /// Returns the current and latest available self-upgrade versions.
     pub fn self_upgrade_summary(&self) -> Result<SelfUpgradeSummary, CoreError> {
-        let current_version = format!("v{}", env!("CARGO_PKG_VERSION"));
+        let current_version = self.version_info()?.current_version;
         let latest_version = fetch_latest_release()?.tag_name;
         Ok(SelfUpgradeSummary {
             updated: current_version != latest_version,
@@ -50,7 +44,7 @@ impl App {
 
     /// Upgrades the running `vs` binary to the provided published release version.
     pub fn upgrade_self_to(&self, latest_version: &str) -> Result<SelfUpgradeSummary, CoreError> {
-        let current_version = format!("v{}", env!("CARGO_PKG_VERSION"));
+        let current_version = self.version_info()?.current_version;
         if current_version == latest_version {
             return Ok(SelfUpgradeSummary {
                 current_version,
@@ -76,7 +70,7 @@ impl App {
         println!(
             "Resolved release asset {} for target {} with feature {}.",
             asset.name,
-            release_target_triple()?,
+            release_target_triple(),
             release_feature_label()?
         );
 
@@ -131,7 +125,7 @@ fn github_client() -> Result<Client, CoreError> {
 }
 
 fn select_release_asset(release: &ReleaseMetadata) -> Result<&ReleaseAsset, CoreError> {
-    let target = release_target_triple()?;
+    let target = release_target_triple();
     let feature = release_feature_label()?;
     let expected_name = release_archive_name(&release.tag_name)?;
     release.assets.iter().find(|asset| asset.name == expected_name).ok_or_else(|| {
@@ -185,111 +179,12 @@ fn create_download_progress_bar(total_size: Option<u64>) -> ProgressBar {
 }
 
 fn release_archive_name(tag: &str) -> Result<String, CoreError> {
-    let target = release_target_triple()?;
+    let target = release_target_triple();
     let feature = release_feature_label()?;
     Ok(format!(
         "vs-{tag}-{target}-{feature}.{}",
-        release_archive_extension(target)
+        release_archive_extension()
     ))
-}
-
-fn release_target_triple() -> Result<&'static str, CoreError> {
-    let linux_libc = if std::env::consts::OS == "linux" {
-        Some(detect_linux_libc())
-    } else {
-        None
-    };
-
-    release_target_triple_for(
-        std::env::consts::OS,
-        std::env::consts::ARCH,
-        linux_libc,
-        cfg!(target_endian = "little"),
-    )
-    .ok_or_else(|| {
-        CoreError::Unsupported(format!(
-            "no published release asset matches target {}-{}",
-            std::env::consts::OS,
-            std::env::consts::ARCH
-        ))
-    })
-}
-
-fn release_archive_extension(target: &str) -> &'static str {
-    if target.contains("windows") {
-        "zip"
-    } else {
-        "tar.gz"
-    }
-}
-
-fn release_feature_label() -> Result<&'static str, CoreError> {
-    #[cfg(any(feature = "full", all(feature = "lua", feature = "wasi")))]
-    {
-        Ok("full")
-    }
-    #[cfg(all(feature = "lua", not(feature = "wasi")))]
-    {
-        Ok("lua")
-    }
-    #[cfg(all(feature = "wasi", not(feature = "lua")))]
-    {
-        Ok("wasi")
-    }
-    #[cfg(not(any(feature = "lua", feature = "wasi")))]
-    {
-        Err(CoreError::Unsupported(String::from(
-            "self-upgrade is unavailable for bare builds because releases only publish lua, wasi, and full binaries",
-        )))
-    }
-}
-
-fn release_target_triple_for(
-    os: &str,
-    arch: &str,
-    linux_libc: Option<LinuxLibc>,
-    little_endian: bool,
-) -> Option<&'static str> {
-    match (os, arch, linux_libc) {
-        ("linux", "x86_64", Some(LinuxLibc::Gnu)) => Some("x86_64-unknown-linux-gnu"),
-        ("linux", "x86_64", Some(LinuxLibc::Musl)) => Some("x86_64-unknown-linux-musl"),
-        ("linux", "x86", Some(LinuxLibc::Gnu)) => Some("i686-unknown-linux-gnu"),
-        ("linux", "x86", Some(LinuxLibc::Musl)) => Some("i686-unknown-linux-musl"),
-        ("linux", "aarch64", Some(LinuxLibc::Gnu)) => Some("aarch64-unknown-linux-gnu"),
-        ("linux", "aarch64", Some(LinuxLibc::Musl)) => Some("aarch64-unknown-linux-musl"),
-        ("linux", "arm", Some(LinuxLibc::Gnu)) => Some("armv7-unknown-linux-gnueabihf"),
-        ("linux", "arm", Some(LinuxLibc::Musl)) => Some("armv7-unknown-linux-musleabihf"),
-        ("linux", "powerpc64", Some(LinuxLibc::Gnu)) if little_endian => {
-            Some("powerpc64le-unknown-linux-gnu")
-        }
-        ("linux", "riscv64", Some(LinuxLibc::Gnu)) => Some("riscv64gc-unknown-linux-gnu"),
-        ("linux", "s390x", Some(LinuxLibc::Gnu)) => Some("s390x-unknown-linux-gnu"),
-        ("macos", "aarch64", _) => Some("aarch64-apple-darwin"),
-        ("macos", "x86_64", _) => Some("x86_64-apple-darwin"),
-        ("windows", "x86_64", _) => Some("x86_64-pc-windows-msvc"),
-        ("windows", "x86", _) => Some("i686-pc-windows-msvc"),
-        ("windows", "aarch64", _) => Some("aarch64-pc-windows-msvc"),
-        _ => None,
-    }
-}
-
-fn detect_linux_libc() -> LinuxLibc {
-    if Path::new("/etc/alpine-release").exists() {
-        return LinuxLibc::Musl;
-    }
-
-    let output = Command::new("ldd").arg("--version").output();
-    let mut combined = String::new();
-    if let Ok(output) = output {
-        combined.push_str(&String::from_utf8_lossy(&output.stdout));
-        combined.push_str(&String::from_utf8_lossy(&output.stderr));
-    }
-
-    if combined.to_ascii_lowercase().contains("musl") {
-        LinuxLibc::Musl
-    } else {
-        LinuxLibc::Gnu
-    }
 }
 
 fn extract_tar_gz_binary(archive_path: &Path, destination: &Path) -> Result<PathBuf, CoreError> {
@@ -419,8 +314,8 @@ fn executable_name() -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::{
-        LinuxLibc, ReleaseAsset, ReleaseMetadata, release_archive_name, release_feature_label,
-        release_target_triple, release_target_triple_for, select_release_asset,
+        ReleaseAsset, ReleaseMetadata, release_archive_name, release_feature_label,
+        release_target_triple, select_release_asset,
     };
 
     #[test]
@@ -469,22 +364,7 @@ mod tests {
             Ok(name) => name,
             Err(error) => panic!("release archive name should resolve: {error}"),
         };
-        let target = match release_target_triple() {
-            Ok(target) => target,
-            Err(error) => panic!("target triple should resolve: {error}"),
-        };
+        let target = release_target_triple();
         assert!(archive_name.contains(target));
-    }
-
-    #[test]
-    fn release_target_triple_should_support_linux_musl_variants() {
-        let triple = release_target_triple_for("linux", "x86_64", Some(LinuxLibc::Musl), true);
-        assert_eq!(triple, Some("x86_64-unknown-linux-musl"));
-    }
-
-    #[test]
-    fn release_target_triple_should_reject_unpublished_linux_musl_targets() {
-        let triple = release_target_triple_for("linux", "riscv64", Some(LinuxLibc::Musl), true);
-        assert_eq!(triple, None);
     }
 }

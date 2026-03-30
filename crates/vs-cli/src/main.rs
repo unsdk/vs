@@ -315,6 +315,14 @@ fn run_with_app(app: App, command: Commands) -> Result<i32> {
             handle_config(&app, args)?;
             Ok(0)
         }
+        Commands::Version(_) => {
+            let info = app.version_info()?;
+            print_status(&format!("Version: {}", info.current_version));
+            print_status(&format!("Build target: {}", info.build_target));
+            print_status(&format!("Build variant: {}", info.build_variant));
+            print_status(&format!("Release archive: .{}", info.archive_extension));
+            Ok(0)
+        }
         Commands::Cd(args) => {
             let path = match args.plugin.as_deref() {
                 Some(plugin) if args.plugin_dir => app.plugin_dir(plugin)?,

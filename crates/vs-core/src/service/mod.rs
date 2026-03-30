@@ -20,3 +20,4 @@ mod unuse;
 mod update;
 mod upgrade;
 mod use_tool;
+mod version;
