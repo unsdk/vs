@@ -193,30 +193,27 @@ impl App {
         version.to_string()
     }
 
-    /// Verifies the hook environment is available.
+    /// Verifies the requested scope can be written in the current environment.
     ///
-    /// On Unix, session scope and project scope require shell hooks to be
-    /// loaded (indicated by `VS_SESSION_ID`). On Windows without hooks the
-    /// scope is silently promoted to Global.
+    /// Project and global scopes are persisted on disk and do not require shell
+    /// hooks. Session scope depends on `VS_SESSION_ID`, and on Windows we
+    /// degrade to global scope when hooks are unavailable.
     fn verify_hook_env(&self, scope: UseScope) -> Result<UseScope, CoreError> {
         if self.session_id.is_some() {
             return Ok(scope);
         }
-        // No session ID — hooks are not loaded.
-        if cfg!(windows) {
-            if scope != UseScope::Global {
+
+        match scope {
+            UseScope::Global | UseScope::Project => Ok(scope),
+            UseScope::Session if cfg!(windows) => {
                 eprintln!(
                     "Warning: The current shell lacks hook support. Switching to global scope automatically."
                 );
+                Ok(UseScope::Global)
             }
-            Ok(UseScope::Global)
-        } else {
-            match scope {
-                UseScope::Global => Ok(scope),
-                _ => Err(CoreError::Unsupported(String::from(
-                    "vs requires hook support. Please ensure vs is properly initialized with `eval \"$(vs activate <shell>)\"`",
-                ))),
-            }
+            UseScope::Session => Err(CoreError::Unsupported(String::from(
+                "vs requires hook support. Please ensure vs is properly initialized with `eval \"$(vs activate <shell>)\"`",
+            ))),
         }
     }
 }
@@ -257,6 +254,53 @@ mod tests {
     use vs_plugin_api::PluginBackendKind;
 
     use crate::{App, UseScope};
+
+    fn new_app_without_session(temp_dir: &TempDir) -> Result<App, Box<dyn Error>> {
+        let home = temp_dir.path().join("home");
+        let cwd = temp_dir.path().join("project");
+        fs::create_dir_all(&cwd)?;
+
+        Ok(App::new(
+            HomeLayout {
+                active_home: home,
+                migration_candidates: Vec::new(),
+            },
+            cwd,
+            None,
+        )?)
+    }
+
+    #[test]
+    fn project_scope_should_not_require_shell_hooks() -> Result<(), Box<dyn Error>> {
+        let temp_dir = TempDir::new()?;
+        let app = new_app_without_session(&temp_dir)?;
+
+        assert_eq!(app.verify_hook_env(UseScope::Project)?, UseScope::Project);
+        assert_eq!(app.verify_hook_env(UseScope::Global)?, UseScope::Global);
+        Ok(())
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn session_scope_should_require_shell_hooks_on_unix() -> Result<(), Box<dyn Error>> {
+        let temp_dir = TempDir::new()?;
+        let app = new_app_without_session(&temp_dir)?;
+
+        let error = app.verify_hook_env(UseScope::Session).unwrap_err();
+        assert!(error.to_string().contains("vs requires hook support"));
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn session_scope_should_fallback_to_global_without_shell_hooks_on_windows()
+    -> Result<(), Box<dyn Error>> {
+        let temp_dir = TempDir::new()?;
+        let app = new_app_without_session(&temp_dir)?;
+
+        assert_eq!(app.verify_hook_env(UseScope::Session)?, UseScope::Global);
+        Ok(())
+    }
 
     #[cfg(feature = "lua")]
     #[test]
