@@ -1,7 +1,6 @@
 //! Services for executing commands with resolved runtime environments.
 
 use std::env::split_paths;
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -160,14 +159,9 @@ fn is_executable_file(path: &Path) -> bool {
     use std::os::unix::fs::PermissionsExt;
 
     path.is_file()
-        && fs::metadata(path)
+        && std::fs::metadata(path)
             .map(|metadata| metadata.permissions().mode() & 0o111 != 0)
             .unwrap_or(false)
-}
-
-#[cfg(not(unix))]
-fn is_executable_file(path: &Path) -> bool {
-    path.is_file()
 }
 
 #[cfg(test)]
