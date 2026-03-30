@@ -1,13 +1,37 @@
 ---
 title: Quick Start
-description: Build the CLI locally, configure a home, add a plugin, install a version, and activate your shell.
+description: Install or build the CLI, configure a home, add a plugin, install a version, and activate your shell.
 ---
 
-This guide walks through the fastest local path from a clean checkout to a working `vs` setup.
+This guide walks through the fastest path from a clean checkout or a published release to a working `vs` setup.
 
-## 1. Build the CLI
+## 1. Install a published release or build the CLI
 
-During development, build the default CLI binary from the workspace root:
+If you just want to install `vs`, use one of the release installers:
+
+### macOS / Linux
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/unsdk/vs/main/scripts/install.sh | bash
+```
+
+### Windows PowerShell
+
+```powershell
+irm https://raw.githubusercontent.com/unsdk/vs/main/scripts/install.ps1 | iex
+```
+
+To install a specific release or variant:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/unsdk/vs/main/scripts/install.sh | bash -s -- --version v0.1.0 --variant lua
+```
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/unsdk/vs/main/scripts/install.ps1))) -Version v0.1.0 -Variant lua
+```
+
+If you are developing from source instead, build the default CLI binary from the workspace root:
 
 ```bash
 cargo build -p vs-cli

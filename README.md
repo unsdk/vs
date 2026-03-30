@@ -2,6 +2,57 @@
 
 `vs` is a Rust workspace for a cross-platform runtime version manager inspired by `vfox`.
 
+## Install from GitHub Releases
+
+### macOS / Linux
+
+Install the latest published `full` build to `~/.local/bin`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/unsdk/vs/main/scripts/install.sh | bash
+```
+
+Install a specific release or variant:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/unsdk/vs/main/scripts/install.sh | bash -s -- --version v0.1.0 --variant lua
+```
+
+### Windows PowerShell
+
+Install the latest published `full` build to `%LOCALAPPDATA%\Programs\vs\bin` and add it to the user `PATH`:
+
+```powershell
+irm https://raw.githubusercontent.com/unsdk/vs/main/scripts/install.ps1 | iex
+```
+
+Install a specific release or variant:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/unsdk/vs/main/scripts/install.ps1))) -Version v0.1.0 -Variant lua
+```
+
+Useful options:
+
+- `--install-dir /path/to/bin`
+- `--target <target-triple>`
+- `--repo <owner/name>`
+
+PowerShell equivalents:
+
+- `-InstallDir <path>`
+- `-Target <target-triple>`
+- `-Repository <owner/name>`
+- `-SkipPathUpdate`
+
+Equivalent environment variables are also supported:
+
+- `VS_INSTALL_DIR`
+- `VS_INSTALL_VERSION`
+- `VS_INSTALL_VARIANT`
+- `VS_INSTALL_TARGET`
+- `VS_RELEASE_REPOSITORY`
+
 ## Status
 
 This repository provides the initial multi-crate implementation with:
