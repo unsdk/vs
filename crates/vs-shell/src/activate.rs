@@ -33,11 +33,20 @@ impl ShellKind {
 }
 
 /// Renders the activation script for a shell.
+///
+/// The activation script only sets up the hook plumbing:
+///   1. `VS_SESSION_ID` — identifies this shell session.
+///   2. Hook function definition + registration.
+///   3. Exit trap for session cleanup.
+///   4. Initial hook call.
+///
+/// All environment variable management (`__VS_ORIG_PATH`, `PATH`,
+/// plugin vars, `__VS_VARS`, `__VS_STATE_HASH`) is handled by
+/// `vs __hook-env` so that the logic lives in one place.
 pub fn render_activation(shell: ShellKind) -> String {
     match shell {
         ShellKind::Bash => String::from(
             r#"export VS_SESSION_ID="$$"
-export __VS_ORIG_PATH="${__VS_ORIG_PATH:-$PATH}"
 vs_activate() {
   local previous_exit_status=$?
   trap -- '' SIGINT
@@ -54,7 +63,6 @@ vs_activate
         ),
         ShellKind::Zsh => String::from(
             r#"export VS_SESSION_ID="$$"
-export __VS_ORIG_PATH="${__VS_ORIG_PATH:-$PATH}"
 vs_activate() {
   trap -- '' SIGINT
   eval "$(vs __hook-env zsh)"
@@ -74,9 +82,6 @@ vs_activate
         ),
         ShellKind::Fish => String::from(
             r#"set -gx VS_SESSION_ID $fish_pid
-if not set -q __VS_ORIG_PATH
-    set -gx __VS_ORIG_PATH $PATH
-end
 function __vs_activate --on-event fish_prompt
     eval (vs __hook-env fish)
 end
@@ -87,7 +92,6 @@ end
         ),
         ShellKind::Nushell => String::from(
             r#"$env.VS_SESSION_ID = $"($nu.pid)"
-$env.__VS_ORIG_PATH = ($env.__VS_ORIG_PATH? | default $env.PATH)
 def --env __vs_activate [] {
   vs __hook-env nushell | lines | each {|line| load-env ($line | from json) }
 }
@@ -97,7 +101,6 @@ __vs_activate
         ),
         ShellKind::Pwsh => String::from(
             r#"$env:VS_SESSION_ID = $PID.ToString()
-if (-not $env:__VS_ORIG_PATH) { $env:__VS_ORIG_PATH = $env:PATH }
 function global:Invoke-VsActivate {
   Invoke-Expression (& vs __hook-env pwsh)
 }
@@ -118,7 +121,6 @@ Invoke-VsActivate
         ShellKind::Clink => String::from(
             r#"set VS_SESSION_ID=%VS_SESSION_ID%
 if "%VS_SESSION_ID%"=="" set VS_SESSION_ID=%RANDOM%
-if "%__VS_ORIG_PATH%"=="" set __VS_ORIG_PATH=%PATH%
 vs __cleanup-stale-sessions >nul 2>nul
 for /f "delims=" %%i in ('vs __hook-env clink') do %%i
 "#,

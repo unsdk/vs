@@ -399,6 +399,13 @@ impl App {
             return Ok(String::new());
         }
 
+        // On the very first call __VS_ORIG_PATH is not yet set.  Capture the
+        // current (clean) PATH so we can freeze it as __VS_ORIG_PATH.
+        let orig_path_needs_export = std::env::var_os("__VS_ORIG_PATH").is_none();
+        let orig_path_value = std::env::var("__VS_ORIG_PATH")
+            .or_else(|_| std::env::var("PATH"))
+            .unwrap_or_default();
+
         let delta = self.build_env()?;
         let path_value = self.path_with_delta(&delta)?;
 
@@ -422,6 +429,12 @@ impl App {
 
         match shell {
             ShellKind::Bash | ShellKind::Zsh => {
+                if orig_path_needs_export {
+                    lines.push(format!(
+                        "export __VS_ORIG_PATH='{}'",
+                        orig_path_value.replace('\'', "'\"'\"'")
+                    ));
+                }
                 for key in &stale_keys {
                     lines.push(format!("unset {key}"));
                 }
@@ -436,6 +449,12 @@ impl App {
                 lines.push(format!("export __VS_STATE_HASH='{state_hash}'"));
             }
             ShellKind::Fish => {
+                if orig_path_needs_export {
+                    lines.push(format!(
+                        "set -gx __VS_ORIG_PATH '{}'",
+                        orig_path_value.replace('\'', "\\'")
+                    ));
+                }
                 for key in &stale_keys {
                     lines.push(format!("set -e {key}"));
                 }
@@ -450,6 +469,11 @@ impl App {
                 lines.push(format!("set -gx __VS_STATE_HASH '{state_hash}'"));
             }
             ShellKind::Nushell => {
+                if orig_path_needs_export {
+                    lines.push(
+                        serde_json::json!({ "__VS_ORIG_PATH": orig_path_value }).to_string(),
+                    );
+                }
                 for key in &stale_keys {
                     lines.push(serde_json::json!({ key.as_str(): "" }).to_string());
                 }
@@ -462,6 +486,12 @@ impl App {
                 lines.push(serde_json::json!({ "__VS_STATE_HASH": state_hash }).to_string());
             }
             ShellKind::Pwsh => {
+                if orig_path_needs_export {
+                    lines.push(format!(
+                        "$env:__VS_ORIG_PATH = '{}'",
+                        orig_path_value.replace('\'', "''")
+                    ));
+                }
                 for key in &stale_keys {
                     lines.push(format!("Remove-Item Env:\\{key} -ErrorAction SilentlyContinue"));
                 }
@@ -473,6 +503,9 @@ impl App {
                 lines.push(format!("$env:__VS_STATE_HASH = '{state_hash}'"));
             }
             ShellKind::Clink => {
+                if orig_path_needs_export {
+                    lines.push(format!("set __VS_ORIG_PATH={orig_path_value}"));
+                }
                 for key in &stale_keys {
                     lines.push(format!("set {key}="));
                 }
