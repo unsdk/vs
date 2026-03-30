@@ -391,6 +391,14 @@ impl App {
     }
 
     pub(crate) fn render_hook_env(&self, shell: ShellKind) -> Result<String, CoreError> {
+        // Fast path: if the state hash has not changed since the last call,
+        // all environment variables are already correct in the shell.
+        let state_hash = self.compute_state_hash();
+        let prev_hash = std::env::var("__VS_STATE_HASH").unwrap_or_default();
+        if !prev_hash.is_empty() && state_hash == prev_hash {
+            return Ok(String::new());
+        }
+
         let delta = self.build_env()?;
         let path_value = self.path_with_delta(&delta)?;
 
@@ -425,6 +433,7 @@ impl App {
                     path_value.replace('\'', "'\"'\"'")
                 ));
                 lines.push(format!("export __VS_VARS='{new_keys_joined}'"));
+                lines.push(format!("export __VS_STATE_HASH='{state_hash}'"));
             }
             ShellKind::Fish => {
                 for key in &stale_keys {
@@ -438,6 +447,7 @@ impl App {
                     path_value.replace('\'', "\\'")
                 ));
                 lines.push(format!("set -gx __VS_VARS '{new_keys_joined}'"));
+                lines.push(format!("set -gx __VS_STATE_HASH '{state_hash}'"));
             }
             ShellKind::Nushell => {
                 for key in &stale_keys {
@@ -449,6 +459,7 @@ impl App {
                 }
                 lines.push(serde_json::json!({ "PATH": path_value }).to_string());
                 lines.push(serde_json::json!({ "__VS_VARS": new_keys_joined }).to_string());
+                lines.push(serde_json::json!({ "__VS_STATE_HASH": state_hash }).to_string());
             }
             ShellKind::Pwsh => {
                 for key in &stale_keys {
@@ -459,6 +470,7 @@ impl App {
                 }
                 lines.push(format!("$env:PATH = '{}'", path_value.replace('\'', "''")));
                 lines.push(format!("$env:__VS_VARS = '{new_keys_joined}'"));
+                lines.push(format!("$env:__VS_STATE_HASH = '{state_hash}'"));
             }
             ShellKind::Clink => {
                 for key in &stale_keys {
@@ -469,10 +481,45 @@ impl App {
                 }
                 lines.push(format!("set PATH={path_value}"));
                 lines.push(format!("set __VS_VARS={new_keys_joined}"));
+                lines.push(format!("set __VS_STATE_HASH={state_hash}"));
             }
         }
 
         Ok(lines.join("\n"))
+    }
+
+    /// Computes a hash over the inputs that affect hook-env output.
+    ///
+    /// When this hash matches `__VS_STATE_HASH` from the shell environment,
+    /// the hook can return immediately without recalculating.
+    fn compute_state_hash(&self) -> String {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        let mut hasher = DefaultHasher::new();
+
+        // CWD path.
+        self.cwd.hash(&mut hasher);
+
+        // CWD directory mtime — changes when files are created/deleted in it,
+        // catching new project config or legacy version files.
+        hash_file_mtime(&mut hasher, &self.cwd);
+
+        // Config file mtimes.
+        hash_file_mtime(&mut hasher, &global_tools_file(self.home()));
+
+        if let Some(path) = find_project_file(&self.cwd) {
+            hash_file_mtime(&mut hasher, &path);
+        }
+        if let Some(path) = find_legacy_file(&self.cwd) {
+            hash_file_mtime(&mut hasher, &path);
+        }
+        if let Some(session_id) = &self.session_id {
+            let session_path = session_tools_file(self.home(), session_id);
+            hash_file_mtime(&mut hasher, &session_path);
+        }
+
+        format!("{:x}", hasher.finish())
     }
 
     pub(crate) fn preferred_project_file(&self) -> PathBuf {
@@ -517,6 +564,17 @@ fn apply_env_keys(delta: &mut EnvDelta, env_keys: Vec<EnvKey>) {
             delta.path_entries.push(PathBuf::from(env_key.value));
         } else {
             delta.vars.push((env_key.key, env_key.value));
+        }
+    }
+}
+
+fn hash_file_mtime(hasher: &mut impl std::hash::Hasher, path: &Path) {
+    use std::hash::Hash;
+    if let Ok(meta) = fs::metadata(path) {
+        if let Ok(mtime) = meta.modified() {
+            if let Ok(duration) = mtime.duration_since(std::time::UNIX_EPOCH) {
+                duration.as_nanos().hash(hasher);
+            }
         }
     }
 }

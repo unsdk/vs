@@ -386,6 +386,10 @@ fn run_with_app(app: App, command: Commands) -> Result<i32> {
             let _ = app.cleanup_session();
             Ok(0)
         }
+        Commands::CleanupStaleSessions => {
+            let _ = app.cleanup_stale_sessions();
+            Ok(0)
+        }
         Commands::Completion(_) | Commands::Complete(_) => {
             unreachable!("completion is handled before app initialization")
         }

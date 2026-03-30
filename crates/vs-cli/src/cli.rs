@@ -56,6 +56,8 @@ pub enum Commands {
     Complete(CompletionArgs),
     #[command(hide = true, name = "__cleanup-session")]
     CleanupSession,
+    #[command(hide = true, name = "__cleanup-stale-sessions")]
+    CleanupStaleSessions,
 }
 
 impl Cli {
