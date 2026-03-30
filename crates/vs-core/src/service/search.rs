@@ -1,3 +1,5 @@
+//! Services for querying plugin-provided version listings.
+
 use vs_plugin_api::AvailableVersion;
 
 use crate::{App, CoreError};

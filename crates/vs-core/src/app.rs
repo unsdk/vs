@@ -1,3 +1,5 @@
+//! The high-level application façade for coordinating core services.
+
 use std::collections::BTreeSet;
 use std::env::{join_paths, split_paths};
 use std::fs;

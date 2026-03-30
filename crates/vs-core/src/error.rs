@@ -1,3 +1,5 @@
+//! Error types returned by the core application layer.
+
 use std::path::PathBuf;
 
 use thiserror::Error;

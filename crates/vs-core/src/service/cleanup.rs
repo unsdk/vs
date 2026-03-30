@@ -1,3 +1,5 @@
+//! Session cleanup services for shell integration state.
+
 use std::fs;
 
 use crate::{App, CoreError};

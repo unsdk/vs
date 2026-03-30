@@ -1,3 +1,5 @@
+//! Argument definitions for the `vs exec` subcommand.
+
 use clap::Args;
 
 /// Executes a command with the resolved runtime environment.

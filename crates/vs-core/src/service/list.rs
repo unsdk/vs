@@ -1,3 +1,5 @@
+//! Services for listing installed runtimes.
+
 use std::fs;
 
 use crate::{App, CoreError, InstalledVersion};

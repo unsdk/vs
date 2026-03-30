@@ -1,3 +1,5 @@
+//! Helpers for materializing plugin sources from local paths or archives.
+
 use std::fs;
 use std::io::{Cursor, Read, Write};
 use std::path::{Path, PathBuf};

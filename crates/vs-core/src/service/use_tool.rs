@@ -1,3 +1,5 @@
+//! Services for activating a tool version in a selected scope.
+
 use std::fs;
 use std::io::Write;
 use std::path::Path;

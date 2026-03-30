@@ -1,3 +1,5 @@
+//! Services for reading plugin metadata and runtime paths.
+
 use crate::{App, CoreError, PluginInfo};
 
 impl App {

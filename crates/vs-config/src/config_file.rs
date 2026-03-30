@@ -1,3 +1,5 @@
+//! Reading and writing persisted `vs` configuration files.
+
 use std::fs;
 use std::path::{Path, PathBuf};
 

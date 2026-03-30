@@ -1,3 +1,5 @@
+//! Services for listing available plugins from configured registries.
+
 use vs_registry::RegistryEntry;
 
 use crate::{App, CoreError};

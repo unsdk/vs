@@ -1,3 +1,5 @@
+//! Environment delta rendering utilities for shell integrations.
+
 use std::path::PathBuf;
 
 /// Environment changes emitted by `vs`.

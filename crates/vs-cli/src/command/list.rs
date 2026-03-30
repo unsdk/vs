@@ -1,3 +1,5 @@
+//! Argument definitions for the `vs list` subcommand.
+
 use clap::Args;
 
 /// List all versions of the target SDK.

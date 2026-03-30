@@ -1,3 +1,5 @@
+//! Result types and helpers for resolving active tool versions.
+
 use std::path::{Path, PathBuf};
 
 use crate::ConfigError;

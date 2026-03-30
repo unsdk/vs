@@ -1,3 +1,5 @@
+//! Argument definitions for the `vs search` subcommand.
+
 use clap::Args;
 
 /// Searches available SDK versions for a plugin.

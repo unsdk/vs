@@ -1,3 +1,5 @@
+//! Services for reading and mutating persisted configuration.
+
 use vs_config::{
     app_config_to_value, flatten_app_config, read_app_config, set_app_config_value,
     unset_app_config_value, write_app_config,

@@ -1,3 +1,5 @@
+//! Filesystem helpers used by the installation pipeline.
+
 use std::fs;
 use std::path::Path;
 

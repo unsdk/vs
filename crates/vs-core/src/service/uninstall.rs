@@ -1,3 +1,5 @@
+//! Services for uninstalling previously materialized runtimes.
+
 use std::fs;
 
 use crate::{App, CoreError, UninstallResult, UseScope};

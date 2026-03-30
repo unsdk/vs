@@ -1,3 +1,5 @@
+//! Temporary workspace helpers for tests.
+
 use tempfile::{TempDir, tempdir};
 
 /// Creates a fresh temporary workspace.

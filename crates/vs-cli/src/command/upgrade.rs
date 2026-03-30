@@ -1,3 +1,5 @@
+//! Argument definitions for the `vs upgrade` subcommand.
+
 use clap::Args;
 
 /// Upgrade `vs` to the latest version.

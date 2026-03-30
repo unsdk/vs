@@ -1,3 +1,5 @@
+//! End-to-end integration tests for the `vs` CLI.
+
 use std::fs;
 use std::path::Path;
 use std::process::Command;

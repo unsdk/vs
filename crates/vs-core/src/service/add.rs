@@ -1,3 +1,5 @@
+//! Plugin registration services.
+
 use vs_plugin_api::PluginBackendKind;
 use vs_registry::RegistryEntry;
 

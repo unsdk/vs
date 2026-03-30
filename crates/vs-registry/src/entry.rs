@@ -1,3 +1,5 @@
+//! Types describing plugin registry entries.
+
 use serde::{Deserialize, Serialize};
 use vs_plugin_api::{PluginBackendKind, PluginManifest};
 

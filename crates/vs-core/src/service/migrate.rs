@@ -1,3 +1,5 @@
+//! Services for migrating data from legacy `vfox` homes.
+
 use crate::{App, CoreError, MigrateSummary};
 
 impl App {

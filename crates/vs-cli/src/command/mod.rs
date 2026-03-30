@@ -1,3 +1,5 @@
+//! Argument modules for each `vs` subcommand.
+
 mod activate;
 mod add;
 mod available;

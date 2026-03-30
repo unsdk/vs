@@ -1,3 +1,5 @@
+//! Argument definitions for the `vs current` subcommand.
+
 use clap::Args;
 
 /// Show current version of the target SDK.

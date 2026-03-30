@@ -1,3 +1,5 @@
+//! Installation receipt persistence helpers.
+
 use vs_plugin_api::InstalledRuntime;
 
 /// Metadata persisted after a successful install.

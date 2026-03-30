@@ -1,3 +1,5 @@
+//! Argument definitions for the `vs cd` subcommand.
+
 use clap::Args;
 
 /// Launches a shell in `VS_HOME`, the plugin source directory, or the active runtime directory.

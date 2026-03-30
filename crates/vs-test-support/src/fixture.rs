@@ -1,3 +1,5 @@
+//! Helpers for locating shared test fixtures.
+
 use std::path::PathBuf;
 
 /// Returns the repository fixture root.

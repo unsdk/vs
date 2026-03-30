@@ -1,3 +1,5 @@
+//! Individual service modules backing the `App` façade.
+
 mod activate;
 mod add;
 mod available;

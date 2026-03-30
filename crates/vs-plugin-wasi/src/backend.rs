@@ -1,3 +1,5 @@
+//! Backend adapter for loading native WASI plugins.
+
 use std::fs;
 use std::path::Path;
 

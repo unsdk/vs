@@ -1,3 +1,5 @@
+//! Argument definitions for the `vs config` subcommand.
+
 use clap::Args;
 
 /// Setup, view config.

@@ -1,3 +1,5 @@
+//! Entry point and command dispatcher for the `vs` CLI binary.
+
 mod cli;
 mod command;
 mod output;

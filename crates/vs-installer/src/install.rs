@@ -1,3 +1,5 @@
+//! Artifact download and runtime installation helpers.
+
 use std::fs;
 use std::io::{Cursor, Read};
 use std::path::{Path, PathBuf};

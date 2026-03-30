@@ -1,3 +1,5 @@
+//! Argument definitions for the `vs update` subcommand.
+
 use clap::Args;
 
 /// Update specified plugin, use --all/-a to update all installed plugins.

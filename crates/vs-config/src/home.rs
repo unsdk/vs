@@ -1,3 +1,5 @@
+//! Resolving the active `vs` home directory.
+
 use std::path::PathBuf;
 
 use dirs::home_dir;

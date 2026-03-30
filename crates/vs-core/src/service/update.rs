@@ -1,3 +1,5 @@
+//! Services for refreshing plugin metadata and sources.
+
 use vs_plugin_api::PluginBackendKind;
 use vs_registry::RegistryEntry;
 

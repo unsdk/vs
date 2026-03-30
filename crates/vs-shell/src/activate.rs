@@ -1,3 +1,5 @@
+//! Activation script rendering for supported shells.
+
 use crate::ShellError;
 
 /// Supported interactive shells.

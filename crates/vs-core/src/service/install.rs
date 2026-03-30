@@ -1,3 +1,5 @@
+//! Services for planning and performing plugin installations.
+
 use crate::{App, CoreError, InstalledVersion};
 
 impl App {

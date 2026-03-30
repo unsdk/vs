@@ -1,3 +1,5 @@
+//! Argument definitions for the `vs use` subcommand.
+
 use clap::Args;
 use vs_core::UseScope;
 

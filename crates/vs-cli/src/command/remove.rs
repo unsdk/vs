@@ -1,3 +1,5 @@
+//! Argument definitions for the `vs remove` subcommand.
+
 use clap::Args;
 
 /// Removes a plugin from the local home.

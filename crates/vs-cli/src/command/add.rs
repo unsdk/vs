@@ -1,3 +1,5 @@
+//! Argument definitions for the `vs add` subcommand.
+
 use clap::{Args, ValueEnum};
 use vs_plugin_api::PluginBackendKind;
 

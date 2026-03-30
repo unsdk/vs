@@ -1,3 +1,5 @@
+//! Shared configuration data types used across the workspace.
+
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 

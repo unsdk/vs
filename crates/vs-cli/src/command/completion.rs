@@ -1,3 +1,5 @@
+//! Argument definitions for shell completion generation commands.
+
 use clap::Args;
 
 /// Generates a shell completion script.

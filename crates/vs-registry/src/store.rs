@@ -1,3 +1,5 @@
+//! Persistence helpers for registry state on disk.
+
 use std::fs;
 use std::path::{Path, PathBuf};
 

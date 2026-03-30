@@ -1,3 +1,5 @@
+//! Argument definitions for the `vs install` subcommand.
+
 use clap::Args;
 
 /// Install a version of the target SDK.

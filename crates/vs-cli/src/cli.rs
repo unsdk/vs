@@ -1,3 +1,5 @@
+//! Clap parser definitions for the `vs` command-line interface.
+
 use clap::{CommandFactory, Parser, Subcommand};
 
 use crate::command::{

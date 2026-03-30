@@ -1,3 +1,5 @@
+//! Error types shared by plugin backends and hosts.
+
 use std::path::PathBuf;
 
 use thiserror::Error;

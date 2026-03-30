@@ -1,3 +1,5 @@
+//! Path helpers for locating runtime bins and scope-specific links.
+
 use std::path::{Path, PathBuf};
 
 /// Common filesystem paths used by `vs`.

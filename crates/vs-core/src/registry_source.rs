@@ -1,3 +1,5 @@
+//! Registry source parsing, URL building, and download helpers.
+
 use reqwest::blocking::Client;
 use serde::Deserialize;
 use vs_plugin_api::PluginBackendKind;
@@ -27,6 +29,7 @@ struct VfoxRegistryEntry {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+/// Minimal plugin manifest shape returned by registry metadata endpoints.
 pub struct RegistryPluginManifest {
     #[serde(default)]
     pub description: Option<String>,

@@ -1,3 +1,5 @@
+//! Argument definitions for the internal `vs __hook-env` command.
+
 use clap::Args;
 
 /// Hidden helper that renders shell env updates.

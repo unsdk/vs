@@ -1,3 +1,5 @@
+//! Argument definitions for the `vs uninstall` subcommand.
+
 use clap::Args;
 
 /// Uninstalls a plugin version.

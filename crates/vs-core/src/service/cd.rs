@@ -1,3 +1,5 @@
+//! Services for resolving directories used by `vs cd`.
+
 use crate::{App, CoreError};
 
 impl App {

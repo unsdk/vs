@@ -1,3 +1,5 @@
+//! Services for executing commands with resolved runtime environments.
+
 use std::env::split_paths;
 use std::path::{Path, PathBuf};
 use std::process::Command;

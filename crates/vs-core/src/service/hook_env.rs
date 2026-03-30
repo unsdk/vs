@@ -1,3 +1,5 @@
+//! Services for generating shell hook environment updates.
+
 use vs_shell::ShellKind;
 
 use crate::{App, CoreError};

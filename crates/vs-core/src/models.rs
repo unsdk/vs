@@ -1,3 +1,5 @@
+//! Core data models returned by application services.
+
 use std::path::PathBuf;
 
 use vs_config::Scope;

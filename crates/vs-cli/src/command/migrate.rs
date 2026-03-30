@@ -1,3 +1,5 @@
+//! Argument definitions for the `vs migrate` subcommand.
+
 use clap::Args;
 
 /// Migrates state from an old `vfox` home.

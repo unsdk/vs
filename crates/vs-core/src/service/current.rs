@@ -1,3 +1,5 @@
+//! Services for resolving the currently active tool version.
+
 use crate::{App, CoreError, CurrentTool};
 
 impl App {

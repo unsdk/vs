@@ -1,3 +1,5 @@
+//! Services for removing registered plugins.
+
 use std::fs;
 
 use crate::{App, CoreError, UseScope};

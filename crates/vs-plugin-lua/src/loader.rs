@@ -1,3 +1,5 @@
+//! Lua plugin loading and hook invocation logic.
+
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};

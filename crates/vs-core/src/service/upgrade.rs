@@ -1,3 +1,5 @@
+//! Services for discovering and applying self-upgrades.
+
 use std::fs;
 use std::io::{Cursor, Read};
 use std::path::{Path, PathBuf};

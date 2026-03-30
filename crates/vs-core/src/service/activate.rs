@@ -1,3 +1,5 @@
+//! Shell activation service entry points.
+
 use vs_shell::{ShellKind, render_activation};
 
 use crate::{App, CoreError};

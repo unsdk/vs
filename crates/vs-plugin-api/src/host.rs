@@ -1,3 +1,5 @@
+//! Host-facing traits implemented by plugin backends.
+
 use std::path::Path;
 
 use crate::error::PluginResult;

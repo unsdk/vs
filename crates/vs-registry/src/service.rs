@@ -1,3 +1,5 @@
+//! High-level services for maintaining the local plugin registry.
+
 use std::path::PathBuf;
 
 use crate::{RegistryEntry, RegistryError, RegistryStore};

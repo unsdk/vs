@@ -1,3 +1,5 @@
+//! Argument definitions for the `vs activate` subcommand.
+
 use clap::Args;
 
 /// Renders a shell activation script.

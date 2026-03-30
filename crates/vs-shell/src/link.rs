@@ -1,3 +1,5 @@
+//! Filesystem linking helpers for active runtime directories.
+
 use std::fs;
 use std::path::Path;
 

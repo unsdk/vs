@@ -1,3 +1,5 @@
+//! Backend adapter for loading Lua plugins.
+
 use std::path::Path;
 
 use vs_plugin_api::{Plugin, PluginError};

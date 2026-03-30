@@ -1,3 +1,5 @@
+//! Project-scoped version file discovery and parsing.
+
 use std::path::{Path, PathBuf};
 
 const PROJECT_FILES: [&str; 4] = [".vs.toml", "vs.toml", ".vfox.toml", "vfox.toml"];

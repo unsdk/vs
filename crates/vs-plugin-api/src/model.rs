@@ -1,3 +1,5 @@
+//! Core plugin manifest and installation data model.
+
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 

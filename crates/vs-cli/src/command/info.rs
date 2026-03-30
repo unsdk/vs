@@ -1,3 +1,5 @@
+//! Argument definitions for the `vs info` subcommand.
+
 use clap::Args;
 
 /// Show plugin info or SDK path.

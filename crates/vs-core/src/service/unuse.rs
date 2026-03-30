@@ -1,3 +1,5 @@
+//! Services for removing active version selections from a scope.
+
 use vs_shell::{global_current_dir, project_sdk_dir, remove_existing};
 
 use crate::{App, CoreError, UseScope};
