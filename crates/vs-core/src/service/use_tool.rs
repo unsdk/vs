@@ -286,7 +286,14 @@ mod tests {
         let temp_dir = TempDir::new()?;
         let app = new_app_without_session(&temp_dir)?;
 
-        let error = app.verify_hook_env(UseScope::Session).unwrap_err();
+        let error = match app.verify_hook_env(UseScope::Session) {
+            Ok(scope) => {
+                return Err(Box::new(std::io::Error::other(format!(
+                    "session scope unexpectedly succeeded with scope {scope:?}",
+                ))));
+            }
+            Err(error) => error,
+        };
         assert!(error.to_string().contains("vs requires hook support"));
         Ok(())
     }
