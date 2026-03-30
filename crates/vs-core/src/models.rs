@@ -63,6 +63,15 @@ pub struct PluginInfo {
     pub installed_versions: Vec<String>,
 }
 
+/// Result from an uninstall operation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UninstallResult {
+    /// Whether the version was actually removed.
+    pub removed: bool,
+    /// When the uninstalled version was active, the version auto-switched to (if any).
+    pub auto_switched: Option<String>,
+}
+
 /// Migration result for `vs migrate`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MigrateSummary {

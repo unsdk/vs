@@ -61,7 +61,7 @@ fn cli_should_run_registry_install_use_and_exec_flow() -> Result<(), Box<dyn std
     );
 
     assert_success(run(&home, &project, &["uninstall", "nodejs@20.11.1"]));
-    assert_success(run(&home, &project, &["remove", "nodejs"]));
+    assert_success(run(&home, &project, &["remove", "-y", "nodejs"]));
     Ok(())
 }
 

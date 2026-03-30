@@ -18,8 +18,8 @@ use crate::output::{
     print_plugin_info, print_search_versions, print_status,
 };
 use crate::tui::{
-    prompt_for_install_all, prompt_for_plugin_addition, prompt_for_upgrade,
-    prompt_for_version_selection, run_search_tui, select_installed_version,
+    prompt_for_install_all, prompt_for_plugin_addition, prompt_for_remove_confirmation,
+    prompt_for_upgrade, prompt_for_version_selection, run_search_tui, select_installed_version,
     should_use_interactive_tui,
 };
 
@@ -97,6 +97,19 @@ fn run_with_app(app: App, command: Commands) -> Result<i32> {
             Ok(0)
         }
         Commands::Remove(args) => {
+            println!(
+                "Removing this plugin will remove the installed sdk along with the plugin."
+            );
+            if !args.yes {
+                if !should_use_interactive_tui() {
+                    anyhow::bail!(
+                        "Use the -y flag to skip confirmation in non-interactive environments"
+                    );
+                }
+                if !prompt_for_remove_confirmation()? {
+                    anyhow::bail!("remove canceled");
+                }
+            }
             let removed = app.remove_plugin(&args.name)?;
             if removed {
                 print_status(&format!("Removed plugin {}", args.name));
@@ -214,9 +227,15 @@ fn run_with_app(app: App, command: Commands) -> Result<i32> {
         Commands::Uninstall(args) => {
             let (plugin, version) = parse_tool_spec(&args.spec)?;
             let version = version.context("uninstall requires plugin@version")?;
-            let removed = app.uninstall_plugin_version(&plugin, &version)?;
-            if removed {
+            let result = app.uninstall_plugin_version(&plugin, &version)?;
+            if result.removed {
                 print_status(&format!("Uninstalled {} {}", plugin, version));
+                if let Some(switched_to) = result.auto_switched {
+                    print_status(&format!(
+                        "Auto switch to {}@{}.",
+                        plugin, switched_to
+                    ));
+                }
             } else {
                 print_status(&format!("{} {} was not installed", plugin, version));
             }

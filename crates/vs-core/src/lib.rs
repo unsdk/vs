@@ -10,7 +10,8 @@ mod service;
 pub use app::App;
 pub use error::CoreError;
 pub use models::{
-    CurrentTool, InstalledVersion, MigrateSummary, PluginInfo, SelfUpgradeSummary, UseScope,
+    CurrentTool, InstalledVersion, MigrateSummary, PluginInfo, SelfUpgradeSummary, UninstallResult,
+    UseScope,
 };
 
 #[cfg(test)]

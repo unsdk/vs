@@ -62,6 +62,14 @@ pub fn prompt_for_install_all() -> Result<bool> {
         .map_err(Into::into)
 }
 
+pub fn prompt_for_remove_confirmation() -> Result<bool> {
+    Confirm::with_theme(&ColorfulTheme::default())
+        .with_prompt("Please confirm")
+        .default(false)
+        .interact()
+        .map_err(Into::into)
+}
+
 pub fn prompt_for_upgrade(current_version: &str, latest_version: &str) -> Result<bool> {
     Confirm::with_theme(&ColorfulTheme::default())
         .with_prompt(format!(
