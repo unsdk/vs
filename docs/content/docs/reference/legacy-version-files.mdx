@@ -14,24 +14,30 @@ description: Compatibility files currently supported by the generic project reso
 
 ## Parsing behavior
 
-`.tool-versions`
+<Tabs items={['.tool-versions', '.nvmrc', '.sdkmanrc']}>
+  <Tab value=".tool-versions">
 
-```text
-nodejs 20.11.1
-java 21-tem
-```
+  ```text
+  nodejs 20.11.1
+  java 21-tem
+  ```
 
-`.nvmrc`
+  </Tab>
+  <Tab value=".nvmrc">
 
-```text
-20.11.1
-```
+  ```text
+  20.11.1
+  ```
 
-`.sdkmanrc`
+  </Tab>
+  <Tab value=".sdkmanrc">
 
-```text
-java=21-tem
-```
+  ```text
+  java=21-tem
+  ```
+
+  </Tab>
+</Tabs>
 
 ## Precedence with `.vs.toml`
 

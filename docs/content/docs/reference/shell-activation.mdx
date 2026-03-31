@@ -5,42 +5,51 @@ description: Load shell hooks so vs can apply the active runtime selection to yo
 
 `vs activate <shell>` prints shell code that wires your shell to the internal helper commands.
 
-## Bash
+<Tabs items={['Bash', 'Zsh', 'Fish', 'Nushell', 'PowerShell', 'Clink']} groupId="shell">
+  <Tab value="Bash">
 
-```bash
-eval "$(vs activate bash)"
-```
+  ```bash
+  eval "$(vs activate bash)"
+  ```
 
-## Zsh
+  </Tab>
+  <Tab value="Zsh">
 
-```zsh
-eval "$(vs activate zsh)"
-```
+  ```zsh
+  eval "$(vs activate zsh)"
+  ```
 
-## Fish
+  </Tab>
+  <Tab value="Fish">
 
-```fish
-vs activate fish | source
-```
+  ```fish
+  vs activate fish | source
+  ```
 
-## Nushell
+  </Tab>
+  <Tab value="Nushell">
 
-```nu
-vs activate nushell | save --force ~/.config/nushell/vs.nu
-source ~/.config/nushell/vs.nu
-```
+  ```nu
+  vs activate nushell | save --force ~/.config/nushell/vs.nu
+  source ~/.config/nushell/vs.nu
+  ```
 
-## PowerShell
+  </Tab>
+  <Tab value="PowerShell">
 
-```powershell
-Invoke-Expression (& vs activate pwsh)
-```
+  ```powershell
+  Invoke-Expression (& vs activate pwsh)
+  ```
 
-## Clink
+  </Tab>
+  <Tab value="Clink">
 
-```bat
-for /f "delims=" %i in ('vs activate clink') do %i
-```
+  ```bat
+  for /f "delims=" %i in ('vs activate clink') do %i
+  ```
+
+  </Tab>
+</Tabs>
 
 ## What activation does
 

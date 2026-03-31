@@ -1,59 +1,82 @@
 ---
 title: Quick Start
-description: Install or build the CLI, configure a home, add a plugin, install a version, and activate your shell.
+description: Install vs, configure a home, add a plugin, install a version, and activate your shell.
 ---
 
-This guide walks through the fastest path from a clean checkout or a published release to a working `vs` setup.
+This guide walks through the fastest path from a clean machine to a working `vs` setup.
 
-## 1. Install a published release or build the CLI
+## 1. Install `vs`
 
-If you just want to install `vs`, use one of the release installers:
+<Tabs items={['Scripts', 'Cargo release', 'GitHub', 'Local build']} groupId="install-method">
+  <Tab value="Cargo release">
 
-### macOS / Linux
+  Install the latest published release from crates.io:
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/unsdk/vs/main/scripts/install.sh | bash
-```
+  ```bash
+  cargo install vs-cli
+  ```
 
-### Windows PowerShell
+  </Tab>
+  <Tab value="GitHub">
 
-```powershell
-irm https://raw.githubusercontent.com/unsdk/vs/main/scripts/install.ps1 | iex
-```
+  Install the latest source version directly from GitHub:
 
-To install a specific release or variant:
+  ```bash
+  cargo install --git https://github.com/unsdk/vs vs-cli
+  ```
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/unsdk/vs/main/scripts/install.sh | bash -s -- --version v0.1.0 --variant lua
-```
+  </Tab>
+  <Tab value="Scripts">
 
-```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/unsdk/vs/main/scripts/install.ps1))) -Version v0.1.0 -Variant lua
-```
+  Install with the release scripts:
 
-If you are developing from source instead, build the default CLI binary from the workspace root:
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/unsdk/vs/main/scripts/install.sh | bash
+  ```
 
-```bash
-cargo build -p vs-cli
-```
+  ```powershell
+  irm https://raw.githubusercontent.com/unsdk/vs/main/scripts/install.ps1 | iex
+  ```
 
-The resulting binary is written to `target/debug/vs`.
+  To install a specific release or variant:
 
-Backend-specific builds are also supported:
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/unsdk/vs/main/scripts/install.sh | bash -s -- --version v0.1.0 --variant lua
+  ```
 
-```bash
-cargo build -p vs-cli --no-default-features --features lua
-cargo build -p vs-cli --no-default-features --features wasi
-cargo build -p vs-cli --no-default-features --features full
-```
+  ```powershell
+  & ([scriptblock]::Create((irm https://raw.githubusercontent.com/unsdk/vs/main/scripts/install.ps1))) -Version v0.1.0 -Variant lua
+  ```
 
-For smaller distributable binaries, the workspace also exposes a size-focused profile:
+  </Tab>
+  <Tab value="Local build">
 
-```bash
-cargo build -p vs-cli --profile min-size --no-default-features
-cargo build -p vs-cli --profile min-size --no-default-features --features lua
-cargo build -p vs-cli --profile min-size --no-default-features --features wasi
-```
+  If you are developing from source, build the default CLI binary from the workspace root:
+
+  ```bash
+  cargo build -p vs-cli
+  ```
+
+  The resulting binary is written to `target/debug/vs`.
+
+  Backend-specific builds are also supported:
+
+  ```bash
+  cargo build -p vs-cli --no-default-features --features lua
+  cargo build -p vs-cli --no-default-features --features wasi
+  cargo build -p vs-cli --no-default-features --features full
+  ```
+
+  For smaller distributable binaries, the workspace also exposes a size-focused profile:
+
+  ```bash
+  cargo build -p vs-cli --profile min-size --no-default-features
+  cargo build -p vs-cli --profile min-size --no-default-features --features lua
+  cargo build -p vs-cli --profile min-size --no-default-features --features wasi
+  ```
+
+  </Tab>
+</Tabs>
 
 ## 2. Choose the active home
 

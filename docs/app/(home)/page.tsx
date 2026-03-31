@@ -103,21 +103,19 @@
                       Quick start
                     </h2>
                     <span className="rounded-full border border-neutral-200 px-2 py-1 text-xs text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">
-                      local workspace
+                      published release
                     </span>
                   </div>
                   <pre className="overflow-x-auto rounded-2xl bg-neutral-950 p-4 text-sm leading-6 text-neutral-100">
-                    <code>{`cargo build -p vs-cli
-export VS_HOME="$HOME/.vs"
-vs config registry.address /absolute/path/to/fixtures/registry/index.json
+                    <code>{`cargo install vs-cli
+eval "$(vs activate zsh)"
 vs add nodejs
-vs install nodejs@20.11.1
-vs use nodejs@20.11.1 -g
-eval "$(vs activate zsh)"`}</code>
+vs i nodejs@20.11.1
+vs u nodejs@20.11.1 -g`}</code>
                   </pre>
                   <p className="mt-4 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
-                    Start with the local fixture registry while developing, then switch to your preferred
-                    registry source or distribution build once you are ready.
+                    This is the shortest happy path for installing `vs`, enabling shell activation, adding a plugin,
+                    installing a runtime, and selecting a global version.
                   </p>
                 </div>
               </section>
