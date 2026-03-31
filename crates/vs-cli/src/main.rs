@@ -209,18 +209,28 @@ fn run_with_app(app: App, command: Commands) -> Result<i32> {
                 anyhow::bail!("sdk name is required");
             }
 
+            let mut failed: Vec<String> = Vec::new();
             for spec in &args.specs {
-                let installed = install_single_spec(&app, spec, args.yes)?;
-                if let Some(installed) = installed {
-                    print_status(&format!(
-                        "Install {}@{} success! ",
-                        installed.plugin, installed.version
-                    ));
-                    print_status(&format!(
-                        "Please use `vs use {}@{}` to use it.",
-                        installed.plugin, installed.version
-                    ));
+                match install_single_spec(&app, spec, args.yes) {
+                    Ok(Some(installed)) => {
+                        print_status(&format!(
+                            "Install {}@{} success! ",
+                            installed.plugin, installed.version
+                        ));
+                        print_status(&format!(
+                            "Please use `vs use {}@{}` to use it.",
+                            installed.plugin, installed.version
+                        ));
+                    }
+                    Ok(None) => {}
+                    Err(error) => {
+                        eprintln!("Failed to install {spec}: {error}");
+                        failed.push(spec.clone());
+                    }
                 }
+            }
+            if !failed.is_empty() {
+                anyhow::bail!("failed to install: {}", failed.join(", "));
             }
             Ok(0)
         }
@@ -521,13 +531,32 @@ fn install_all_configured(app: &App, yes: bool) -> Result<()> {
         }
     }
 
+    let mut failed: Vec<String> = Vec::new();
     for (plugin, version) in pending {
-        ensure_plugin_added_for_install(app, &plugin, true)?;
-        let installed = app.install_plugin_version(&plugin, Some(&version))?;
-        print_status(&format!(
-            "Install {}@{} success! ",
-            installed.plugin, installed.version
-        ));
+        if let Err(error) = ensure_plugin_added_for_install(app, &plugin, true) {
+            eprintln!("Failed to add {plugin}: {error}");
+            failed.push(format!("{plugin}@{version}"));
+            continue;
+        }
+        match app.install_plugin_version(&plugin, Some(&version)) {
+            Ok(installed) => {
+                print_status(&format!(
+                    "Install {}@{} success! ",
+                    installed.plugin, installed.version
+                ));
+                print_status(&format!(
+                    "Please use `vs use {}@{}` to use it.",
+                    installed.plugin, installed.version
+                ));
+            }
+            Err(error) => {
+                eprintln!("Failed to install {plugin}@{version}: {error}");
+                failed.push(format!("{plugin}@{version}"));
+            }
+        }
+    }
+    if !failed.is_empty() {
+        anyhow::bail!("failed to install: {}", failed.join(", "));
     }
     Ok(())
 }

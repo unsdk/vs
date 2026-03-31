@@ -27,7 +27,15 @@ impl App {
 
         let plan = plugin.install_plan(&selected_version)?;
         let runtime = self.installer.install(&plan)?;
-        plugin.post_install(&runtime)?;
+
+        // Run PostInstall inside a logical transaction: if it fails, roll back
+        // the freshly committed install directory so we never leave a half-
+        // configured runtime on disk.
+        if let Err(error) = plugin.post_install(&runtime) {
+            let _ = std::fs::remove_dir_all(&runtime.root_dir);
+            return Err(error.into());
+        }
+
         Ok(InstalledVersion {
             plugin: plugin_name.to_string(),
             version: runtime.version,
