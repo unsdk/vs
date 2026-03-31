@@ -85,17 +85,7 @@ impl LuaPlugin {
         T: serde::Serialize,
         R: serde::de::DeserializeOwned,
     {
-        let function: Function = self
-            .plugin_table
-            .get(hook_name)
-            .into_plugin_result()?;
-        let ctx_value = self
-            .lua
-            .to_value(ctx)
-            .into_plugin_result()?;
-        let result = function
-            .call::<MultiValue>((self.plugin_table.clone(), ctx_value))
-            .into_plugin_result()?;
+        let result = self.call_hook_raw(hook_name, ctx)?;
         decode_hook_result(&self.lua, result)
     }
 
@@ -228,7 +218,7 @@ impl Plugin for LuaPlugin {
         previous_version: Option<&str>,
         installed: &[InstalledRuntime],
     ) -> Result<Option<String>, PluginError> {
-        if !self.has_function("preUse")? {
+        if !self.has_function("PreUse")? {
             return Ok(None);
         }
         let installed_sdks = installed
@@ -246,7 +236,7 @@ impl Plugin for LuaPlugin {
             })
             .collect::<BTreeMap<_, _>>();
         let result: PreUseHookResult = self.call_hook(
-            "preUse",
+            "PreUse",
             &PreUseHookCtx {
                 cwd: cwd.display().to_string(),
                 scope: scope.to_string(),
