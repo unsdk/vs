@@ -18,6 +18,16 @@ use crate::output::version_label;
 const LIST_PAGE_SIZE: usize = 20;
 const NO_MATCHES_LABEL: &str = "  No matches";
 
+struct PageRenderState<'a> {
+    prompt: &'a str,
+    search_term: &'a str,
+    cursor: usize,
+    filtered: &'a [(usize, String)],
+    selection: Option<usize>,
+    page_start: usize,
+    page_size: usize,
+}
+
 /// Returns `true` when interactive prompts are safe to show.
 pub fn should_use_interactive_tui() -> bool {
     // Skip prompts in CI even if the streams look interactive so scripted runs stay deterministic.
@@ -143,13 +153,15 @@ fn pageable_fuzzy_select(prompt: &str, items: &[String]) -> Result<Option<usize>
         render_page(
             &term,
             &theme,
-            prompt,
-            &search_term,
-            cursor,
-            &filtered,
-            selection,
-            page_start,
-            page_size,
+            PageRenderState {
+                prompt,
+                search_term: &search_term,
+                cursor,
+                filtered: &filtered,
+                selection,
+                page_start,
+                page_size,
+            },
         )?;
         rendered_lines = rendered_line_count(&filtered, page_start, page_size);
         term.flush()?;
@@ -244,46 +256,36 @@ fn pageable_fuzzy_select(prompt: &str, items: &[String]) -> Result<Option<usize>
     }
 }
 
-fn render_page(
-    term: &Term,
-    theme: &dyn Theme,
-    prompt: &str,
-    search_term: &str,
-    cursor: usize,
-    filtered: &[(usize, String)],
-    selection: Option<usize>,
-    page_start: usize,
-    page_size: usize,
-) -> Result<()> {
+fn render_page(term: &Term, theme: &dyn Theme, state: PageRenderState<'_>) -> Result<()> {
     let prompt_line = format_fuzzy_prompt(
         theme,
-        prompt,
-        search_term,
-        cursor,
-        filtered.len(),
-        page_start,
-        page_size,
+        state.prompt,
+        state.search_term,
+        state.cursor,
+        state.filtered.len(),
+        state.page_start,
+        state.page_size,
     )?;
     term.write_line(&prompt_line)?;
 
-    if filtered.is_empty() {
+    if state.filtered.is_empty() {
         term.write_line(NO_MATCHES_LABEL)?;
         return Ok(());
     }
 
     let matcher = SkimMatcherV2::default();
     let highlight_matches = true;
-    let end = (page_start + page_size).min(filtered.len());
+    let end = (state.page_start + state.page_size).min(state.filtered.len());
 
-    for (visible_idx, (_, item)) in filtered[page_start..end].iter().enumerate() {
-        let active = selection == Some(page_start + visible_idx);
+    for (visible_idx, (_, item)) in state.filtered[state.page_start..end].iter().enumerate() {
+        let active = state.selection == Some(state.page_start + visible_idx);
         let line = format_fuzzy_item(
             theme,
             item,
             active,
             highlight_matches,
             &matcher,
-            search_term,
+            state.search_term,
         )?;
         term.write_line(&line)?;
     }
@@ -410,7 +412,7 @@ fn normalize_state(
 }
 
 fn page_size_for_rows(rows: usize) -> usize {
-    (rows.max(3) - 2).min(LIST_PAGE_SIZE).max(1)
+    (rows.max(3) - 2).clamp(1, LIST_PAGE_SIZE)
 }
 
 fn last_page_start(total_items: usize, page_size: usize) -> usize {
