@@ -2110,6 +2110,7 @@ dependencies = [
  "clap",
  "clap_complete",
  "dialoguer",
+ "fuzzy-matcher",
  "tempfile",
  "vs-config",
  "vs-core",

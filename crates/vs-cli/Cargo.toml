@@ -24,6 +24,7 @@ anyhow.workspace = true
 clap.workspace = true
 clap_complete.workspace = true
 dialoguer.workspace = true
+fuzzy-matcher.workspace = true
 vs-config.workspace = true
 vs-core.workspace = true
 vs-plugin-api.workspace = true
