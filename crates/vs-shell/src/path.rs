@@ -11,8 +11,10 @@ pub struct HomePaths {
     pub registry_dir: PathBuf,
     /// Installed plugin metadata directory.
     pub plugins_dir: PathBuf,
-    /// Installed runtime cache directory.
+    /// Home-local cache directory used for command metadata.
     pub cache_dir: PathBuf,
+    /// Installed runtime directory.
+    pub runtime_dir: PathBuf,
     /// Global shim directory.
     pub shims_dir: PathBuf,
     /// Session state directory.
@@ -22,12 +24,13 @@ pub struct HomePaths {
 }
 
 /// Returns the canonical home layout.
-pub fn home_paths(home: &Path) -> HomePaths {
+pub fn home_paths(home: &Path, runtime_root: &Path) -> HomePaths {
     HomePaths {
         home: home.to_path_buf(),
         registry_dir: home.join("registry"),
         plugins_dir: home.join("plugins"),
         cache_dir: home.join("cache"),
+        runtime_dir: runtime_root.to_path_buf(),
         shims_dir: home.join("shims"),
         sessions_dir: home.join("sessions"),
         global_dir: home.join("global"),
@@ -35,16 +38,13 @@ pub fn home_paths(home: &Path) -> HomePaths {
 }
 
 /// Returns the directory where a plugin version is installed.
-pub fn install_dir(home: &Path, plugin: &str, version: &str) -> PathBuf {
-    home.join("cache")
-        .join(plugin)
-        .join("versions")
-        .join(version)
+pub fn install_dir(runtime_root: &Path, plugin: &str, version: &str) -> PathBuf {
+    runtime_root.join(plugin).join("versions").join(version)
 }
 
 /// Returns the global `current` directory path for a plugin.
-pub fn global_current_dir(home: &Path, plugin: &str) -> PathBuf {
-    home.join("cache").join(plugin).join("current")
+pub fn global_current_dir(runtime_root: &Path, plugin: &str) -> PathBuf {
+    runtime_root.join(plugin).join("current")
 }
 
 /// Returns the project-local SDK link directory.

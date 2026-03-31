@@ -42,7 +42,7 @@ impl App {
         let remaining = self.installer.installed_versions(plugin_name)?;
 
         if remaining.is_empty() {
-            let plugin_cache = self.home().join("cache").join(plugin_name);
+            let plugin_cache = self.runtime_root().join(plugin_name);
             if plugin_cache.exists() {
                 let _ = fs::remove_dir_all(plugin_cache);
             }

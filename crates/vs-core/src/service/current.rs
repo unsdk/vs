@@ -5,12 +5,7 @@ use crate::{App, CoreError, CurrentTool};
 impl App {
     /// Resolves the active version for a specific plugin.
     pub fn current_tool(&self, plugin_name: &str) -> Result<Option<CurrentTool>, CoreError> {
-        let resolved = vs_config::resolve_tool_version(
-            self.home(),
-            &self.cwd,
-            self.session_id.as_deref(),
-            plugin_name,
-        )?;
+        let resolved = self.resolve_configured_tool_version(plugin_name)?;
         let Some(resolved) = resolved else {
             return Ok(None);
         };

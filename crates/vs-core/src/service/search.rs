@@ -11,8 +11,6 @@ impl App {
         plugin_name: &str,
         args: &[String],
     ) -> Result<Vec<AvailableVersion>, CoreError> {
-        let entry = self.resolve_registry_entry(plugin_name)?;
-        let plugin = self.load_plugin(&entry)?;
-        plugin.available_versions(args).map_err(Into::into)
+        self.cached_available_versions(plugin_name, args)
     }
 }

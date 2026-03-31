@@ -13,7 +13,11 @@ impl App {
         let mut copied_roots = 0;
         for relative in ["config.yaml", "global", "registry", "plugins", "cache"] {
             let source_path = source_home.join(relative);
-            let destination_path = self.home().join(relative);
+            let destination_path = if relative == "cache" {
+                self.runtime_root().to_path_buf()
+            } else {
+                self.home().join(relative)
+            };
             if !source_path.exists() {
                 continue;
             }

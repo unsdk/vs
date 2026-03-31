@@ -11,7 +11,7 @@ impl App {
     ) -> Result<InstalledVersion, CoreError> {
         let entry = self.resolve_registry_entry(plugin_name)?;
         let plugin = self.load_plugin(&entry)?;
-        let available_versions = plugin.available_versions(&[])?;
+        let available_versions = self.cached_available_versions(plugin_name, &[])?;
         let selected_version = version
             .map(str::to_string)
             .or_else(|| {
@@ -45,10 +45,9 @@ impl App {
 
     /// Returns the version requested by the project config for a plugin, when present.
     pub fn project_tool_version(&self, plugin_name: &str) -> Result<Option<String>, CoreError> {
-        Ok(vs_config::find_project_file(&self.cwd)
-            .map(|path| vs_config::read_tool_versions(&path))
-            .transpose()?
-            .and_then(|tools| tools.tools.get(plugin_name).cloned()))
+        Ok(self
+            .resolve_project_tool_version_internal(plugin_name)?
+            .map(|resolved| resolved.version))
     }
 
     /// Lists configured tools that should be installed for the current context.

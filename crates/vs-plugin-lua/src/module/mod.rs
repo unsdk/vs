@@ -18,7 +18,11 @@ use vs_plugin_api::{IntoPluginResult, PluginError};
 /// # Errors
 ///
 /// Returns an error when the Lua `package.preload` table cannot be populated.
-pub fn register_builtin_modules(lua: &Lua, user_agent: &str) -> Result<(), PluginError> {
+pub fn register_builtin_modules(
+    lua: &Lua,
+    user_agent: &str,
+    proxy_url: Option<&str>,
+) -> Result<(), PluginError> {
     let globals = lua.globals();
     let package: Table = globals.get("package").into_plugin_result()?;
     let preload: Table = package.get("preload").into_plugin_result()?;
@@ -29,7 +33,7 @@ pub fn register_builtin_modules(lua: &Lua, user_agent: &str) -> Result<(), Plugi
     preload
         .set(
             "http",
-            http::create_http_module(lua, user_agent).into_plugin_result()?,
+            http::create_http_module(lua, user_agent, proxy_url).into_plugin_result()?,
         )
         .into_plugin_result()?;
     preload

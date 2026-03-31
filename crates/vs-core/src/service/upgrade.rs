@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 
 use flate2::read::GzDecoder;
 use indicatif::{ProgressBar, ProgressStyle};
+use reqwest::Proxy;
 use reqwest::blocking::Client;
 use serde::Deserialize;
 use tar::Archive;
@@ -34,7 +35,7 @@ impl App {
     /// Returns the current and latest available self-upgrade versions.
     pub fn self_upgrade_summary(&self) -> Result<SelfUpgradeSummary, CoreError> {
         let current_version = self.version_info()?.current_version;
-        let latest_version = fetch_latest_release()?.tag_name;
+        let latest_version = fetch_latest_release(self.proxy_url())?.tag_name;
         Ok(SelfUpgradeSummary {
             updated: current_version != latest_version,
             current_version,
@@ -65,7 +66,7 @@ impl App {
             temp_dir.path().display()
         );
 
-        let release = fetch_release_by_tag(latest_version)?;
+        let release = fetch_release_by_tag(latest_version, self.proxy_url())?;
         let asset = select_release_asset(&release)?;
         println!(
             "Resolved release asset {} for target {} with feature {}.",
@@ -81,7 +82,7 @@ impl App {
             asset.browser_download_url,
             archive_path.display()
         );
-        download_release_archive(&asset.browser_download_url, &archive_path)?;
+        download_release_archive(&asset.browser_download_url, &archive_path, self.proxy_url())?;
 
         let unpack_dir = temp_dir.path().join("unpacked");
         let replacement = if cfg!(windows) {
@@ -100,28 +101,37 @@ impl App {
     }
 }
 
-fn fetch_latest_release() -> Result<ReleaseMetadata, CoreError> {
-    fetch_release_from_endpoint(&format!(
-        "https://api.github.com/repos/{RELEASE_REPOSITORY}/releases/latest"
-    ))
+fn fetch_latest_release(proxy_url: Option<&str>) -> Result<ReleaseMetadata, CoreError> {
+    fetch_release_from_endpoint(
+        &format!("https://api.github.com/repos/{RELEASE_REPOSITORY}/releases/latest"),
+        proxy_url,
+    )
 }
 
-fn fetch_release_by_tag(tag: &str) -> Result<ReleaseMetadata, CoreError> {
-    fetch_release_from_endpoint(&format!(
-        "https://api.github.com/repos/{RELEASE_REPOSITORY}/releases/tags/{tag}"
-    ))
+fn fetch_release_by_tag(tag: &str, proxy_url: Option<&str>) -> Result<ReleaseMetadata, CoreError> {
+    fetch_release_from_endpoint(
+        &format!("https://api.github.com/repos/{RELEASE_REPOSITORY}/releases/tags/{tag}"),
+        proxy_url,
+    )
 }
 
-fn fetch_release_from_endpoint(url: &str) -> Result<ReleaseMetadata, CoreError> {
-    let response = github_client()?.get(url).send()?.error_for_status()?;
+fn fetch_release_from_endpoint(
+    url: &str,
+    proxy_url: Option<&str>,
+) -> Result<ReleaseMetadata, CoreError> {
+    let response = github_client(proxy_url)?
+        .get(url)
+        .send()?
+        .error_for_status()?;
     response.json::<ReleaseMetadata>().map_err(Into::into)
 }
 
-fn github_client() -> Result<Client, CoreError> {
-    Client::builder()
-        .user_agent(format!("vs/{}", env!("CARGO_PKG_VERSION")))
-        .build()
-        .map_err(Into::into)
+fn github_client(proxy_url: Option<&str>) -> Result<Client, CoreError> {
+    let mut builder = Client::builder().user_agent(format!("vs/{}", env!("CARGO_PKG_VERSION")));
+    if let Some(proxy_url) = proxy_url {
+        builder = builder.proxy(Proxy::all(proxy_url)?);
+    }
+    builder.build().map_err(Into::into)
 }
 
 fn select_release_asset(release: &ReleaseMetadata) -> Result<&ReleaseAsset, CoreError> {
@@ -145,8 +155,15 @@ fn select_release_asset(release: &ReleaseMetadata) -> Result<&ReleaseAsset, Core
     })
 }
 
-fn download_release_archive(url: &str, archive_path: &Path) -> Result<(), CoreError> {
-    let mut response = github_client()?.get(url).send()?.error_for_status()?;
+fn download_release_archive(
+    url: &str,
+    archive_path: &Path,
+    proxy_url: Option<&str>,
+) -> Result<(), CoreError> {
+    let mut response = github_client(proxy_url)?
+        .get(url)
+        .send()?
+        .error_for_status()?;
     let progress_bar = create_download_progress_bar(response.content_length());
     let mut output = fs::File::create(archive_path)?;
     let mut buffer = [0_u8; 8192];

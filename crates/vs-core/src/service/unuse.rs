@@ -14,7 +14,7 @@ impl App {
                     plugin_name,
                     None,
                 )?;
-                remove_existing(&global_current_dir(self.home(), plugin_name))?;
+                remove_existing(&global_current_dir(self.runtime_root(), plugin_name))?;
             }
             UseScope::Project => {
                 self.write_tool_assignment(&self.preferred_project_file(), plugin_name, None)?;

@@ -28,15 +28,19 @@ pub fn resolve_home_with(
     }
 
     let default_vs_home = user_home.join(".vs");
+    let migration_candidates = [user_home.join(".vfox"), user_home.join(".version-fox")]
+        .into_iter()
+        .filter(|candidate| candidate.exists())
+        .collect();
     if default_vs_home.exists() {
         return Ok(HomeLayout {
             active_home: default_vs_home,
-            migration_candidates: Vec::new(),
+            migration_candidates,
         });
     }
 
     Ok(HomeLayout {
         active_home: default_vs_home,
-        migration_candidates: Vec::new(),
+        migration_candidates,
     })
 }

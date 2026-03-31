@@ -22,7 +22,7 @@ impl App {
         }
 
         // Remove all installed SDK versions.
-        let cache_dir = self.home().join("cache").join(name);
+        let cache_dir = self.runtime_root().join(name);
         if cache_dir.exists() {
             fs::remove_dir_all(&cache_dir)?;
         }

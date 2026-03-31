@@ -1,5 +1,6 @@
 //! Registry source parsing, URL building, and download helpers.
 
+use reqwest::Proxy;
 use reqwest::blocking::Client;
 use serde::Deserialize;
 use vs_plugin_api::PluginBackendKind;
@@ -43,10 +44,8 @@ pub fn is_remote_registry_source(source: &str) -> bool {
 }
 
 /// Downloads text from a remote source.
-pub fn fetch_url_text(url: &str) -> Result<String, CoreError> {
-    let client = Client::builder()
-        .user_agent(format!("vs/{}", env!("CARGO_PKG_VERSION")))
-        .build()?;
+pub fn fetch_url_text(url: &str, proxy_url: Option<&str>) -> Result<String, CoreError> {
+    let client = build_http_client(proxy_url)?;
     let response = client.get(url).send()?.error_for_status()?;
     response.text().map_err(Into::into)
 }
@@ -79,15 +78,19 @@ pub fn registry_manifest_url(address: &str, plugin_name: &str) -> String {
 pub fn fetch_plugin_manifest(
     address: &str,
     plugin_name: &str,
+    proxy_url: Option<&str>,
 ) -> Result<RegistryPluginManifest, CoreError> {
     let url = registry_manifest_url(address, plugin_name);
-    fetch_plugin_manifest_from_url(&url)
+    fetch_plugin_manifest_from_url(&url, proxy_url)
 }
 
 /// Fetches a registry plugin manifest from a full URL or local path.
-pub fn fetch_plugin_manifest_from_url(url: &str) -> Result<RegistryPluginManifest, CoreError> {
+pub fn fetch_plugin_manifest_from_url(
+    url: &str,
+    proxy_url: Option<&str>,
+) -> Result<RegistryPluginManifest, CoreError> {
     let content = if is_remote_registry_source(url) {
-        fetch_url_text(url)?
+        fetch_url_text(url, proxy_url)?
     } else {
         std::fs::read_to_string(url)?
     };
@@ -98,15 +101,21 @@ pub fn fetch_plugin_manifest_from_url(url: &str) -> Result<RegistryPluginManifes
 }
 
 /// Downloads bytes from a remote source.
-pub fn fetch_url_bytes(url: &str) -> Result<Vec<u8>, CoreError> {
-    let client = Client::builder()
-        .user_agent(format!("vs/{}", env!("CARGO_PKG_VERSION")))
-        .build()?;
+pub fn fetch_url_bytes(url: &str, proxy_url: Option<&str>) -> Result<Vec<u8>, CoreError> {
+    let client = build_http_client(proxy_url)?;
     let response = client.get(url).send()?.error_for_status()?;
     response
         .bytes()
         .map(|bytes| bytes.to_vec())
         .map_err(Into::into)
+}
+
+fn build_http_client(proxy_url: Option<&str>) -> Result<Client, CoreError> {
+    let mut builder = Client::builder().user_agent(format!("vs/{}", env!("CARGO_PKG_VERSION")));
+    if let Some(proxy_url) = proxy_url {
+        builder = builder.proxy(Proxy::all(proxy_url)?);
+    }
+    builder.build().map_err(Into::into)
 }
 
 /// Parses registry JSON into `RegistryEntry` values.

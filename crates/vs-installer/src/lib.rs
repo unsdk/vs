@@ -11,6 +11,15 @@ use thiserror::Error;
 pub use install::Installer;
 pub use receipt::InstallReceipt;
 
+/// Runtime installer configuration resolved by the application layer.
+#[derive(Debug, Clone, Default)]
+pub struct InstallerOptions {
+    /// Alternative runtime root directory.
+    pub runtime_root: Option<PathBuf>,
+    /// Optional explicit proxy URL for outbound downloads.
+    pub proxy_url: Option<String>,
+}
+
 /// Errors returned by installer services.
 #[derive(Debug, Error)]
 pub enum InstallerError {

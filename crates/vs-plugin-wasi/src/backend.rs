@@ -151,14 +151,24 @@ impl Plugin for WasiPlugin {
         file_name: &str,
         _file_path: &Path,
         content: &str,
-        _installed_versions: &[String],
+        installed_versions: &[String],
+        strategy: &str,
     ) -> Result<Option<String>, PluginError> {
         if self.legacy_filenames.iter().any(|name| name == file_name) {
             let trimmed = content.trim();
-            if trimmed.is_empty() {
-                Ok(None)
-            } else {
-                Ok(Some(trimmed.to_string()))
+            match strategy {
+                "latest_installed" => Ok(select_matching_version(trimmed, installed_versions)
+                    .or_else(|| (!trimmed.is_empty()).then(|| trimmed.to_string()))),
+                "latest_available" => {
+                    let available = self
+                        .available_versions(&[])?
+                        .into_iter()
+                        .map(|version| version.version)
+                        .collect::<Vec<_>>();
+                    Ok(select_matching_version(trimmed, &available)
+                        .or_else(|| (!trimmed.is_empty()).then(|| trimmed.to_string())))
+                }
+                _ => Ok((!trimmed.is_empty()).then(|| trimmed.to_string())),
             }
         } else {
             Ok(None)
@@ -175,4 +185,22 @@ impl WasiBackend {
     pub fn load(&self, source: &Path) -> Result<Box<dyn Plugin>, PluginError> {
         Ok(Box::new(WasiPlugin::load(source)?))
     }
+}
+
+fn select_matching_version(selector: &str, candidates: &[String]) -> Option<String> {
+    if candidates.is_empty() {
+        return None;
+    }
+    let selector = selector.trim();
+    if selector.is_empty() {
+        return candidates.first().cloned();
+    }
+    if let Some(exact) = candidates.iter().find(|candidate| candidate == &selector) {
+        return Some(exact.clone());
+    }
+    let prefix = format!("{selector}.");
+    candidates
+        .iter()
+        .find(|candidate| candidate.starts_with(&prefix))
+        .cloned()
 }

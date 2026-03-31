@@ -38,7 +38,7 @@ impl std::fmt::Debug for LuaPlugin {
 
 impl LuaPlugin {
     /// Loads a plugin from a source directory.
-    pub fn load(source: &Path) -> Result<Self, PluginError> {
+    pub fn load(source: &Path, proxy_url: Option<&str>) -> Result<Self, PluginError> {
         let lua = Lua::new();
         set_package_paths(&lua, source)?;
 
@@ -46,7 +46,7 @@ impl LuaPlugin {
             .file_name()
             .and_then(std::ffi::OsStr::to_str)
             .unwrap_or("plugin");
-        register_builtin_modules(&lua, &compute_user_agent(plugin_name, None))?;
+        register_builtin_modules(&lua, &compute_user_agent(plugin_name, None), proxy_url)?;
         set_runtime_globals(&lua, source)?;
         load_plugin_scripts(&lua, source)?;
 
@@ -62,6 +62,7 @@ impl LuaPlugin {
         register_builtin_modules(
             &lua,
             &compute_user_agent(&manifest.name, manifest.version.as_deref()),
+            proxy_url,
         )?;
 
         Ok(Self {
@@ -244,6 +245,7 @@ impl Plugin for LuaPlugin {
         file_path: &Path,
         content: &str,
         installed_versions: &[String],
+        strategy: &str,
     ) -> Result<Option<String>, PluginError> {
         if !self
             .manifest
@@ -264,6 +266,8 @@ impl Plugin for LuaPlugin {
             ctx.set("filepath", file_path.display().to_string())
                 .into_plugin_result()?;
             ctx.set("filename", file_name.to_string())
+                .into_plugin_result()?;
+            ctx.set("strategy", strategy.to_string())
                 .into_plugin_result()?;
 
             let versions: Vec<String> = installed_versions.to_vec();
@@ -293,11 +297,7 @@ impl Plugin for LuaPlugin {
         }
 
         let trimmed = content.trim();
-        if trimmed.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(trimmed.to_string()))
-        }
+        resolve_fallback_legacy_version(self, trimmed, installed_versions, strategy)
     }
 
     fn pre_uninstall(&self, runtime: &InstalledRuntime) -> Result<(), PluginError> {
@@ -334,6 +334,46 @@ where
         return Err(PluginError::NoResultProvided);
     }
     lua.from_value(first).into_plugin_result()
+}
+
+fn resolve_fallback_legacy_version(
+    plugin: &LuaPlugin,
+    parsed_version: &str,
+    installed_versions: &[String],
+    strategy: &str,
+) -> Result<Option<String>, PluginError> {
+    match strategy {
+        "latest_installed" => Ok(select_matching_version(parsed_version, installed_versions)
+            .or_else(|| (!parsed_version.is_empty()).then(|| parsed_version.to_string()))),
+        "latest_available" => {
+            let available = plugin
+                .available_versions(&[])?
+                .into_iter()
+                .map(|version| version.version)
+                .collect::<Vec<_>>();
+            Ok(select_matching_version(parsed_version, &available)
+                .or_else(|| (!parsed_version.is_empty()).then(|| parsed_version.to_string())))
+        }
+        _ => Ok((!parsed_version.is_empty()).then(|| parsed_version.to_string())),
+    }
+}
+
+fn select_matching_version(selector: &str, candidates: &[String]) -> Option<String> {
+    if candidates.is_empty() {
+        return None;
+    }
+    let selector = selector.trim();
+    if selector.is_empty() {
+        return candidates.first().cloned();
+    }
+    if let Some(exact) = candidates.iter().find(|candidate| candidate == &selector) {
+        return Some(exact.clone());
+    }
+    let prefix = format!("{selector}.");
+    candidates
+        .iter()
+        .find(|candidate| candidate.starts_with(&prefix))
+        .cloned()
 }
 
 fn parse_install_source(

@@ -162,7 +162,7 @@ mod tests {
         let lua = Lua::new();
         let current_dir = std::env::current_dir()?;
         set_package_paths(&lua, &current_dir)?;
-        register_builtin_modules(&lua, "vs-test/0.1.0")?;
+        register_builtin_modules(&lua, "vs-test/0.1.0", None)?;
 
         lua.load(
             r#"
@@ -229,7 +229,7 @@ mod tests {
         let lua = Lua::new();
         let current_dir = std::env::current_dir()?;
         set_package_paths(&lua, &current_dir)?;
-        register_builtin_modules(&lua, "vs-test/0.1.0")?;
+        register_builtin_modules(&lua, "vs-test/0.1.0", None)?;
         lua.globals().set("page", page)?;
 
         lua.load(

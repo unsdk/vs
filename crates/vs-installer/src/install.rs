@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 
 use indicatif::{ProgressBar, ProgressStyle};
 use md5::Md5;
+use reqwest::Proxy;
 use reqwest::blocking::Client;
 use sha1::Sha1;
 use sha2::{Digest, Sha256, Sha512};
@@ -18,6 +19,7 @@ use xz2::read::XzDecoder;
 use zip::ZipArchive;
 
 use crate::InstallerError;
+use crate::InstallerOptions;
 use crate::fs::copy_dir_all;
 use crate::receipt::InstallReceipt;
 
@@ -25,16 +27,29 @@ use crate::receipt::InstallReceipt;
 #[derive(Debug, Clone)]
 pub struct Installer {
     home: PathBuf,
+    runtime_root: PathBuf,
+    proxy_url: Option<String>,
 }
 
 impl Installer {
     /// Creates a new installer rooted at the active home.
     pub fn new(home: impl Into<PathBuf>) -> Self {
-        Self { home: home.into() }
+        Self::with_options(home, InstallerOptions::default())
+    }
+
+    /// Creates a new installer with explicit runtime settings.
+    pub fn with_options(home: impl Into<PathBuf>, options: InstallerOptions) -> Self {
+        let home = home.into();
+        let runtime_root = options.runtime_root.unwrap_or_else(|| home.join("cache"));
+        Self {
+            home,
+            runtime_root,
+            proxy_url: options.proxy_url,
+        }
     }
 
     fn versions_root(&self, plugin: &str) -> PathBuf {
-        self.home.join("cache").join(plugin).join("versions")
+        self.runtime_root.join(plugin).join("versions")
     }
 
     fn receipt_path(install_dir: &Path) -> PathBuf {
@@ -63,7 +78,7 @@ impl Installer {
                 }
             })
             .collect::<Vec<_>>();
-        versions.sort();
+        versions.sort_by(|left, right| compare_versions_desc(left, right));
         Ok(versions)
     }
 
@@ -173,7 +188,7 @@ impl Installer {
                 self.install_from_file(path, artifact.checksum.as_ref(), &target_path)?;
             }
             InstallSource::Url { url, headers } => {
-                let bytes = download_bytes(url, headers)?;
+                let bytes = self.download_bytes(url, headers)?;
                 let temp_dir = self.home.join("downloads");
                 fs::create_dir_all(&temp_dir)?;
                 let temp_file = Builder::new().prefix("artifact-").tempfile_in(temp_dir)?;
@@ -254,6 +269,54 @@ impl Installer {
         }
         Ok(())
     }
+
+    fn http_client(&self) -> Result<Client, InstallerError> {
+        let mut builder = Client::builder().user_agent(format!("vs/{}", env!("CARGO_PKG_VERSION")));
+        if let Some(proxy_url) = self.proxy_url.as_deref() {
+            builder = builder.proxy(
+                Proxy::all(proxy_url)
+                    .map_err(|error| InstallerError::Download(error.to_string()))?,
+            );
+        }
+        builder
+            .build()
+            .map_err(|error| InstallerError::Download(error.to_string()))
+    }
+
+    fn download_bytes(
+        &self,
+        url: &str,
+        headers: &std::collections::BTreeMap<String, String>,
+    ) -> Result<Vec<u8>, InstallerError> {
+        let client = self.http_client()?;
+        let mut request = client.get(url);
+        for (key, value) in headers {
+            request = request.header(key, value);
+        }
+        let response = request
+            .send()
+            .and_then(reqwest::blocking::Response::error_for_status)
+            .map_err(|error| InstallerError::Download(error.to_string()))?;
+        let total_size = response.content_length();
+        let progress_bar = create_download_progress_bar(total_size);
+        let mut response = response;
+        let mut bytes = Vec::new();
+        let mut buffer = [0_u8; 8192];
+
+        loop {
+            let read = response
+                .read(&mut buffer)
+                .map_err(|error| InstallerError::Download(error.to_string()))?;
+            if read == 0 {
+                break;
+            }
+            bytes.extend_from_slice(&buffer[..read]);
+            progress_bar.inc(read as u64);
+        }
+
+        progress_bar.finish_and_clear();
+        Ok(bytes)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -324,41 +387,31 @@ fn artifact_file_name(source_name: &str) -> Option<String> {
     }
 }
 
-fn download_bytes(
-    url: &str,
-    headers: &std::collections::BTreeMap<String, String>,
-) -> Result<Vec<u8>, InstallerError> {
-    let client = Client::builder()
-        .user_agent(format!("vs/{}", env!("CARGO_PKG_VERSION")))
-        .build()
-        .map_err(|error| InstallerError::Download(error.to_string()))?;
-    let mut request = client.get(url);
-    for (key, value) in headers {
-        request = request.header(key, value);
-    }
-    let response = request
-        .send()
-        .and_then(reqwest::blocking::Response::error_for_status)
-        .map_err(|error| InstallerError::Download(error.to_string()))?;
-    let total_size = response.content_length();
-    let progress_bar = create_download_progress_bar(total_size);
-    let mut response = response;
-    let mut bytes = Vec::new();
-    let mut buffer = [0_u8; 8192];
+fn compare_versions_desc(left: &str, right: &str) -> std::cmp::Ordering {
+    compare_version_components(left, right).reverse()
+}
 
-    loop {
-        let read = response
-            .read(&mut buffer)
-            .map_err(|error| InstallerError::Download(error.to_string()))?;
-        if read == 0 {
-            break;
+fn compare_version_components(left: &str, right: &str) -> std::cmp::Ordering {
+    let left_parts = version_components(left);
+    let right_parts = version_components(right);
+    for (left_part, right_part) in left_parts.iter().zip(right_parts.iter()) {
+        let ordering = match (left_part.parse::<u64>(), right_part.parse::<u64>()) {
+            (Ok(left_num), Ok(right_num)) => left_num.cmp(&right_num),
+            _ => left_part.cmp(right_part),
+        };
+        if ordering != std::cmp::Ordering::Equal {
+            return ordering;
         }
-        bytes.extend_from_slice(&buffer[..read]);
-        progress_bar.inc(read as u64);
     }
+    left_parts.len().cmp(&right_parts.len())
+}
 
-    progress_bar.finish_and_clear();
-    Ok(bytes)
+fn version_components(version: &str) -> Vec<&str> {
+    version
+        .trim_start_matches('v')
+        .split(|ch: char| !ch.is_ascii_alphanumeric())
+        .filter(|part| !part.is_empty())
+        .collect()
 }
 
 fn create_download_progress_bar(total_size: Option<u64>) -> ProgressBar {

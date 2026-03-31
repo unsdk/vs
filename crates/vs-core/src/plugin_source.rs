@@ -68,7 +68,7 @@ impl App {
         }
 
         let archive_url = normalize_remote_plugin_archive_url(url);
-        let archive_bytes = fetch_url_bytes(&archive_url)?;
+        let archive_bytes = fetch_url_bytes(&archive_url, self.proxy_url())?;
         let staging_root = self.plugin_sources_dir().join(".staging");
         fs::create_dir_all(&staging_root)?;
         let temp_dir = Builder::new().prefix("plugin-").tempdir_in(&staging_root)?;

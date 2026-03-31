@@ -28,8 +28,7 @@ impl App {
             .map(|current| current.version);
         let installed_runtimes = self.load_installed_runtimes(plugin_name)?;
 
-        let requested_version =
-            self.resolve_requested_use_version(&*plugin, plugin_name, version)?;
+        let requested_version = self.resolve_requested_use_version(plugin_name, version)?;
         let hook_version = plugin.pre_use(
             &requested_version,
             scope.as_str(),
@@ -64,7 +63,7 @@ impl App {
                 )?;
                 link_directory(
                     &installed.install_dir,
-                    &global_current_dir(self.home(), plugin_name),
+                    &global_current_dir(self.runtime_root(), plugin_name),
                 )?;
             }
             UseScope::Project => {
@@ -96,10 +95,9 @@ impl App {
         &self,
         plugin_name: &str,
     ) -> Result<Option<String>, CoreError> {
-        Ok(vs_config::find_project_file(&self.cwd)
-            .map(|path| vs_config::read_tool_versions(&path))
-            .transpose()?
-            .and_then(|tools| tools.tools.get(plugin_name).cloned()))
+        Ok(self
+            .resolve_project_tool_version_internal(plugin_name)?
+            .map(|resolved| resolved.version))
     }
 
     /// Returns installed versions for a single plugin, sorted from newest-looking to oldest-looking.
@@ -112,7 +110,7 @@ impl App {
             .into_iter()
             .filter(|installed| installed.plugin == plugin_name)
             .collect::<Vec<_>>();
-        installed.sort_by(|left, right| right.version.cmp(&left.version));
+        installed.sort_by(|left, right| compare_versions_desc(&left.version, &right.version));
         Ok(installed)
     }
 
@@ -131,7 +129,6 @@ impl App {
 
     fn resolve_requested_use_version(
         &self,
-        plugin: &dyn vs_plugin_api::Plugin,
         plugin_name: &str,
         version: &str,
     ) -> Result<String, CoreError> {
@@ -139,8 +136,7 @@ impl App {
             return Ok(version.to_string());
         }
 
-        plugin
-            .available_versions(&[])?
+        self.cached_available_versions(plugin_name, &[])?
             .into_iter()
             .next()
             .map(|available| available.version)
@@ -174,20 +170,14 @@ impl App {
         }
 
         // Prefix match — sort installed versions and pick the first match.
-        let mut versions: Vec<&str> = installed_runtimes
+        let mut versions: Vec<String> = installed_runtimes
             .iter()
-            .map(|rt| rt.version.as_str())
+            .map(|rt| rt.version.clone())
             .collect();
-        versions.sort();
+        versions.sort_by(|left, right| compare_versions_desc(left, right));
 
-        let prefix = format!("{version}.");
-        for v in &versions {
-            if *v == version {
-                return version.to_string();
-            }
-            if v.starts_with(&prefix) {
-                return (*v).to_string();
-            }
+        if let Some(matched) = select_matching_installed_version(version, &versions) {
+            return matched;
         }
 
         version.to_string()
@@ -216,6 +206,47 @@ impl App {
             ))),
         }
     }
+}
+
+fn select_matching_installed_version(selector: &str, candidates: &[String]) -> Option<String> {
+    if candidates.is_empty() {
+        return None;
+    }
+    if let Some(exact) = candidates.iter().find(|candidate| candidate == &selector) {
+        return Some(exact.clone());
+    }
+    let prefix = format!("{selector}.");
+    candidates
+        .iter()
+        .find(|candidate| candidate.starts_with(&prefix))
+        .cloned()
+}
+
+fn compare_versions_desc(left: &str, right: &str) -> std::cmp::Ordering {
+    compare_version_components(left, right).reverse()
+}
+
+fn compare_version_components(left: &str, right: &str) -> std::cmp::Ordering {
+    let left_parts = version_components(left);
+    let right_parts = version_components(right);
+    for (left_part, right_part) in left_parts.iter().zip(right_parts.iter()) {
+        let ordering = match (left_part.parse::<u64>(), right_part.parse::<u64>()) {
+            (Ok(left_num), Ok(right_num)) => left_num.cmp(&right_num),
+            _ => left_part.cmp(right_part),
+        };
+        if ordering != std::cmp::Ordering::Equal {
+            return ordering;
+        }
+    }
+    left_parts.len().cmp(&right_parts.len())
+}
+
+fn version_components(version: &str) -> Vec<&str> {
+    version
+        .trim_start_matches('v')
+        .split(|ch: char| !ch.is_ascii_alphanumeric())
+        .filter(|part| !part.is_empty())
+        .collect()
 }
 
 /// If a `.gitignore` exists in `project_dir` and does not already mention

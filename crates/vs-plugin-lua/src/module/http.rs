@@ -3,6 +3,7 @@ use std::fs;
 use std::path::Path;
 
 use mlua::{Lua, LuaSerdeExt, MultiValue, Result as LuaResult, Table, Value};
+use reqwest::Proxy;
 use reqwest::blocking::Client;
 
 #[derive(serde::Deserialize)]
@@ -12,13 +13,19 @@ struct HttpRequest {
     headers: BTreeMap<String, String>,
 }
 
-pub(super) fn create_http_module(lua: &Lua, user_agent: &str) -> LuaResult<mlua::Function> {
+pub(super) fn create_http_module(
+    lua: &Lua,
+    user_agent: &str,
+    proxy_url: Option<&str>,
+) -> LuaResult<mlua::Function> {
     let user_agent = user_agent.to_string();
+    let proxy_url = proxy_url.map(str::to_string);
     lua.create_function(move |lua, ()| {
-        let client = Client::builder()
-            .user_agent(user_agent.clone())
-            .build()
-            .map_err(mlua::Error::external)?;
+        let mut builder = Client::builder().user_agent(user_agent.clone());
+        if let Some(proxy_url) = proxy_url.as_deref() {
+            builder = builder.proxy(Proxy::all(proxy_url).map_err(mlua::Error::external)?);
+        }
+        let client = builder.build().map_err(mlua::Error::external)?;
         let table = lua.create_table()?;
 
         let client_get = client.clone();

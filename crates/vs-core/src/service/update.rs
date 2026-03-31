@@ -26,7 +26,7 @@ impl App {
             source
         };
         let mut entries = if is_remote_registry_source(&registry_source) {
-            let content = fetch_url_text(&registry_source)?;
+            let content = fetch_url_text(&registry_source, self.proxy_url())?;
             parse_registry_entries(&content).map_err(|error| CoreError::RegistrySource {
                 path: registry_source.clone().into(),
                 message: error.to_string(),
@@ -115,7 +115,7 @@ impl App {
             .as_deref()
             .or(manifest.update_url.as_deref())
         {
-            let plugin_manifest = fetch_plugin_manifest_from_url(manifest_url)?;
+            let plugin_manifest = fetch_plugin_manifest_from_url(manifest_url, self.proxy_url())?;
             if !plugin_manifest.download_url.is_empty() {
                 return Ok(Some(plugin_manifest.download_url));
             }
@@ -125,7 +125,7 @@ impl App {
             let config = self.app_config()?;
             if !config.registry.address.is_empty() {
                 if let Ok(plugin_manifest) =
-                    fetch_plugin_manifest(&config.registry.address, manifest_name)
+                    fetch_plugin_manifest(&config.registry.address, manifest_name, self.proxy_url())
                 {
                     if !plugin_manifest.download_url.is_empty() {
                         return Ok(Some(plugin_manifest.download_url));

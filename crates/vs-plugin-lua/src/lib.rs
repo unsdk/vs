@@ -21,7 +21,7 @@ mod tests {
     fn lua_plugin_should_load_fixture_versions() -> Result<(), Box<dyn Error>> {
         let root =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/plugins/nodejs-lua");
-        let plugin = LuaPlugin::load(&root)?;
+        let plugin = LuaPlugin::load(&root, None)?;
         let versions = plugin.available_versions(&[])?;
         assert_eq!(versions.len(), 2);
         assert_eq!(versions[0].version, "20.11.1");

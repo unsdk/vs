@@ -116,4 +116,47 @@ mod tests {
         assert_eq!(versions.tools.get("java"), Some(&String::from("21-tem")));
         Ok(())
     }
+
+    #[test]
+    fn resolve_home_should_collect_legacy_candidates() -> Result<(), Box<dyn Error>> {
+        let temp_dir = TempDir::new()?;
+        let user_home = temp_dir.path().join("user");
+        fs::create_dir_all(user_home.join(".vfox"))?;
+        fs::create_dir_all(user_home.join(".version-fox"))?;
+
+        let layout = resolve_home_with(None, user_home)?;
+
+        assert_eq!(layout.migration_candidates.len(), 2);
+        assert!(
+            layout
+                .migration_candidates
+                .iter()
+                .any(|path| path.ends_with(".vfox"))
+        );
+        assert!(
+            layout
+                .migration_candidates
+                .iter()
+                .any(|path| path.ends_with(".version-fox"))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn set_app_config_value_should_validate_legacy_strategy_and_cache_duration()
+    -> Result<(), Box<dyn Error>> {
+        let mut config = AppConfig::default();
+        set_app_config_value(
+            &mut config,
+            "legacyVersionFile.strategy",
+            "latest_installed",
+        )?;
+        set_app_config_value(&mut config, "cache.availableHookDuration", "24h")?;
+
+        assert!(
+            set_app_config_value(&mut config, "legacyVersionFile.strategy", "unknown").is_err()
+        );
+        assert!(set_app_config_value(&mut config, "cache.availableHookDuration", "3w").is_err());
+        Ok(())
+    }
 }

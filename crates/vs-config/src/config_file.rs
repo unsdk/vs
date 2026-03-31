@@ -136,9 +136,21 @@ pub fn set_app_config_value(
                     })?;
         }
         "legacyVersionFile.strategy" => {
+            if !is_supported_legacy_strategy(value) {
+                return Err(ConfigError::InvalidValue {
+                    key: key.to_string(),
+                    value: value.to_string(),
+                });
+            }
             config.legacy_version_file.strategy = value.to_string();
         }
         "cache.availableHookDuration" => {
+            if !is_supported_duration(value) {
+                return Err(ConfigError::InvalidValue {
+                    key: key.to_string(),
+                    value: value.to_string(),
+                });
+            }
             config.cache.available_hook_duration = value.to_string();
         }
         _ => {
@@ -186,4 +198,30 @@ pub fn app_config_to_value(config: &AppConfig) -> Result<Value, ConfigError> {
         path: PathBuf::from("config.yaml"),
         message: error.to_string(),
     })
+}
+
+fn is_supported_legacy_strategy(value: &str) -> bool {
+    matches!(value, "specified" | "latest_installed" | "latest_available")
+}
+
+fn is_supported_duration(value: &str) -> bool {
+    let trimmed = value.trim();
+    if trimmed.is_empty() || trimmed == "0" {
+        return true;
+    }
+
+    let split_at = trimmed
+        .find(|ch: char| !ch.is_ascii_digit())
+        .unwrap_or(trimmed.len());
+    let (amount, unit) = trimmed.split_at(split_at);
+    if amount
+        .parse::<u64>()
+        .ok()
+        .filter(|amount| *amount > 0)
+        .is_none()
+    {
+        return false;
+    }
+
+    matches!(unit, "" | "s" | "m" | "h" | "d")
 }

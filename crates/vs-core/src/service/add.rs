@@ -56,9 +56,11 @@ impl App {
             if entry.backend == PluginBackendKind::Lua {
                 let config = self.app_config()?;
                 if !config.registry.address.is_empty() {
-                    if let Ok(manifest) =
-                        fetch_plugin_manifest(&config.registry.address, &entry.name)
-                    {
+                    if let Ok(manifest) = fetch_plugin_manifest(
+                        &config.registry.address,
+                        &entry.name,
+                        self.proxy_url(),
+                    ) {
                         entry.source = manifest.download_url;
                         entry.description = manifest.description.or(entry.description);
                     }
