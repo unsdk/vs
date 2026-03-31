@@ -73,9 +73,7 @@ impl LuaPlugin {
 
     fn has_function(&self, name: &str) -> Result<bool, PluginError> {
         Ok(!matches!(
-            self.plugin_table
-                .get::<Value>(name)
-                .into_plugin_result()?,
+            self.plugin_table.get::<Value>(name).into_plugin_result()?,
             Value::Nil
         ))
     }
@@ -93,14 +91,8 @@ impl LuaPlugin {
     where
         T: serde::Serialize,
     {
-        let function: Function = self
-            .plugin_table
-            .get(hook_name)
-            .into_plugin_result()?;
-        let ctx_value = self
-            .lua
-            .to_value(ctx)
-            .into_plugin_result()?;
+        let function: Function = self.plugin_table.get(hook_name).into_plugin_result()?;
+        let ctx_value = self.lua.to_value(ctx).into_plugin_result()?;
         function
             .call::<MultiValue>((self.plugin_table.clone(), ctx_value))
             .into_plugin_result()
@@ -126,10 +118,8 @@ impl Plugin for LuaPlugin {
     }
 
     fn install_plan(&self, version: &str) -> Result<InstallPlan, PluginError> {
-        let result: PreInstallHookResult = self.call_hook(
-            "PreInstall",
-            &PreInstallHookCtx { version },
-        )?;
+        let result: PreInstallHookResult =
+            self.call_hook("PreInstall", &PreInstallHookCtx { version })?;
         let resolved_version = result.version.unwrap_or_else(|| version.to_string());
         let main_name = result
             .name
@@ -270,10 +260,7 @@ impl Plugin for LuaPlugin {
                 .get("ParseLegacyFile")
                 .into_plugin_result()?;
 
-            let ctx = self
-                .lua
-                .create_table()
-                .into_plugin_result()?;
+            let ctx = self.lua.create_table().into_plugin_result()?;
             ctx.set("filepath", file_path.display().to_string())
                 .into_plugin_result()?;
             ctx.set("filename", file_name.to_string())
@@ -324,10 +311,7 @@ impl Plugin for LuaPlugin {
             name: runtime.main.name.clone(),
             note: runtime.main.note.clone(),
         };
-        let _ = self.call_hook_raw(
-            "PreUninstall",
-            &PreUninstallHookCtx { main, sdk_info },
-        )?;
+        let _ = self.call_hook_raw("PreUninstall", &PreUninstallHookCtx { main, sdk_info })?;
         Ok(())
     }
 }
@@ -349,8 +333,7 @@ where
     if matches!(first, Value::Nil) {
         return Err(PluginError::NoResultProvided);
     }
-    lua.from_value(first)
-        .into_plugin_result()
+    lua.from_value(first).into_plugin_result()
 }
 
 fn parse_install_source(
@@ -451,9 +434,7 @@ fn set_runtime_globals(lua: &Lua, source: &Path) -> Result<(), PluginError> {
         .set("ARCH_TYPE", runtime_arch_type())
         .into_plugin_result()?;
 
-    let runtime = lua
-        .create_table()
-        .into_plugin_result()?;
+    let runtime = lua.create_table().into_plugin_result()?;
     runtime
         .set("osType", runtime_os_type())
         .into_plugin_result()?;
@@ -466,9 +447,7 @@ fn set_runtime_globals(lua: &Lua, source: &Path) -> Result<(), PluginError> {
     runtime
         .set("pluginDirPath", source.display().to_string())
         .into_plugin_result()?;
-    globals
-        .set("RUNTIME", runtime)
-        .into_plugin_result()
+    globals.set("RUNTIME", runtime).into_plugin_result()
 }
 
 fn load_plugin_scripts(lua: &Lua, source: &Path) -> Result<(), PluginError> {
