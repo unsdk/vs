@@ -12,7 +12,8 @@ use vs_plugin_api::{
 
 use crate::model::{
     AvailableHookCtx, AvailableHookResultItem, EnvKeysHookCtx, EnvKeysHookResultItem, MetadataFile,
-    PostInstallHookCtx, PreInstallAdditionItem, PreInstallHookCtx, PreInstallHookResult,
+    ParseLegacyFileHookCtx, ParseLegacyFileHookResult, PostInstallHookCtx,
+    PreInstallAdditionItem, PreInstallHookCtx, PreInstallHookResult, PreUninstallHookCtx,
     PreUseHookCtx, PreUseHookResult, build_installed_package_map, build_manifest,
 };
 use crate::module::{register_builtin_modules, set_package_paths};
@@ -272,23 +273,63 @@ impl Plugin for LuaPlugin {
     fn parse_legacy_file(
         &self,
         file_name: &str,
+        file_path: &Path,
         content: &str,
     ) -> Result<Option<String>, PluginError> {
-        if self
+        if !self
             .manifest
             .legacy_filenames
             .iter()
             .any(|name| name == file_name)
         {
-            let trimmed = content.trim();
-            if trimmed.is_empty() {
+            return Ok(None);
+        }
+
+        if self.has_function("ParseLegacyFile")? {
+            let result: ParseLegacyFileHookResult = self.call_hook(
+                "ParseLegacyFile",
+                &ParseLegacyFileHookCtx {
+                    filepath: file_path.display().to_string(),
+                    filename: file_name.to_string(),
+                    runtime_version: VFOX_COMPAT_RUNTIME_VERSION,
+                },
+            )?;
+            let version = result.version.trim().to_string();
+            return if version.is_empty() {
                 Ok(None)
             } else {
-                Ok(Some(trimmed.to_string()))
-            }
-        } else {
-            Ok(None)
+                Ok(Some(version))
+            };
         }
+
+        let trimmed = content.trim();
+        if trimmed.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(trimmed.to_string()))
+        }
+    }
+
+    fn pre_uninstall(&self, runtime: &InstalledRuntime) -> Result<(), PluginError> {
+        if !self.has_function("PreUninstall")? {
+            return Ok(());
+        }
+        let sdk_info = build_installed_package_map(runtime);
+        let main = crate::model::InstalledPackageItem {
+            path: runtime.main.path.display().to_string(),
+            version: runtime.main.version.clone(),
+            name: runtime.main.name.clone(),
+            note: runtime.main.note.clone(),
+        };
+        let _ = self.call_hook_raw(
+            "PreUninstall",
+            &PreUninstallHookCtx {
+                main,
+                sdk_info,
+                runtime_version: VFOX_COMPAT_RUNTIME_VERSION,
+            },
+        )?;
+        Ok(())
     }
 }
 

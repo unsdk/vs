@@ -37,5 +37,15 @@ pub trait Plugin {
     }
 
     /// Attempts to map a legacy file content to a version.
-    fn parse_legacy_file(&self, file_name: &str, content: &str) -> PluginResult<Option<String>>;
+    fn parse_legacy_file(
+        &self,
+        file_name: &str,
+        file_path: &Path,
+        content: &str,
+    ) -> PluginResult<Option<String>>;
+
+    /// Runs optional pre-uninstall logic before a version is removed.
+    fn pre_uninstall(&self, _runtime: &InstalledRuntime) -> PluginResult<()> {
+        Ok(())
+    }
 }

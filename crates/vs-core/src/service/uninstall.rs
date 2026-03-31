@@ -20,6 +20,17 @@ impl App {
             .map(|current| current.version == version)
             .unwrap_or(false);
 
+        // Call PreUninstall hook when the plugin and receipt are available.
+        if let Ok(Some(runtime)) = self.installer.read_receipt(plugin_name, version) {
+            if let Ok(entry) = self.resolve_registry_entry(plugin_name) {
+                if let Ok(plugin) = self.load_plugin(&entry) {
+                    if let Err(error) = plugin.pre_uninstall(&runtime) {
+                        eprintln!("PreUninstall hook failed for {plugin_name}@{version}: {error}");
+                    }
+                }
+            }
+        }
+
         let removed = self.installer.uninstall(plugin_name, version)?;
         if !removed {
             return Ok(UninstallResult {

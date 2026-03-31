@@ -148,6 +148,7 @@ impl Plugin for WasiPlugin {
     fn parse_legacy_file(
         &self,
         file_name: &str,
+        _file_path: &Path,
         content: &str,
     ) -> Result<Option<String>, PluginError> {
         if self.legacy_filenames.iter().any(|name| name == file_name) {

@@ -191,6 +191,30 @@ pub struct PreUseHookResult {
     pub version: String,
 }
 
+/// Context passed to the optional `ParseLegacyFile` hook.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ParseLegacyFileHookCtx {
+    pub filepath: String,
+    pub filename: String,
+    pub runtime_version: &'static str,
+}
+
+/// Result returned by the optional `ParseLegacyFile` hook.
+#[derive(Debug, Deserialize)]
+pub struct ParseLegacyFileHookResult {
+    pub version: String,
+}
+
+/// Context passed to the optional `PreUninstall` hook.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PreUninstallHookCtx {
+    pub main: InstalledPackageItem,
+    pub sdk_info: BTreeMap<String, InstalledPackageItem>,
+    pub runtime_version: &'static str,
+}
+
 /// Builds the name-keyed package map exposed to Lua hooks.
 pub fn build_installed_package_map(
     runtime: &InstalledRuntime,
