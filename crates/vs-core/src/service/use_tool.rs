@@ -409,7 +409,7 @@ mod tests {
         )?;
         fs::write(
             root.join("hooks/pre_use.lua"),
-            "function PLUGIN:PreUse(ctx)\n  if ctx.version == 'lts' then\n    return { version = '20.11.1' }\n  end\n  return { version = ctx.version }\nend\n",
+            "function PLUGIN:preUse(ctx)\n  if ctx.version == 'lts' then\n    return { version = '20.11.1' }\n  end\n  return { version = ctx.version }\nend\n",
         )?;
         Ok(())
     }

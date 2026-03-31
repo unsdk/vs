@@ -46,6 +46,9 @@ pub fn print_plugin_info(info: &PluginInfo) {
     if let Some(homepage) = &info.manifest.homepage {
         println!("Homepage -> {homepage}");
     }
+    if let Some(license) = &info.manifest.license {
+        println!("License  -> {license}");
+    }
     println!(
         "Desc     -> {}",
         info.manifest

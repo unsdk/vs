@@ -31,6 +31,7 @@ impl RegistryEntry {
             aliases: self.aliases.clone(),
             version: None,
             homepage: None,
+            license: None,
             update_url: None,
             manifest_url: None,
             min_runtime_version: None,

@@ -42,6 +42,7 @@ pub trait Plugin {
         file_name: &str,
         file_path: &Path,
         content: &str,
+        installed_versions: &[String],
     ) -> PluginResult<Option<String>>;
 
     /// Runs optional pre-uninstall logic before a version is removed.

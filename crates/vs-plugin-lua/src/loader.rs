@@ -12,9 +12,9 @@ use vs_plugin_api::{
 
 use crate::model::{
     AvailableHookCtx, AvailableHookResultItem, EnvKeysHookCtx, EnvKeysHookResultItem, MetadataFile,
-    ParseLegacyFileHookCtx, ParseLegacyFileHookResult, PostInstallHookCtx,
-    PreInstallAdditionItem, PreInstallHookCtx, PreInstallHookResult, PreUninstallHookCtx,
-    PreUseHookCtx, PreUseHookResult, build_installed_package_map, build_manifest,
+    ParseLegacyFileHookResult, PostInstallHookCtx, PreInstallAdditionItem, PreInstallHookCtx,
+    PreInstallHookResult, PreUninstallHookCtx, PreUseHookCtx, PreUseHookResult,
+    build_installed_package_map, build_manifest,
 };
 use crate::module::{register_builtin_modules, set_package_paths};
 
@@ -130,7 +130,6 @@ impl Plugin for LuaPlugin {
             "Available",
             &AvailableHookCtx {
                 args: args.to_vec(),
-                runtime_version: VFOX_COMPAT_RUNTIME_VERSION,
             },
         )?;
         Ok(results.into_iter().map(Into::into).collect())
@@ -139,10 +138,7 @@ impl Plugin for LuaPlugin {
     fn install_plan(&self, version: &str) -> Result<InstallPlan, PluginError> {
         let result: PreInstallHookResult = self.call_hook(
             "PreInstall",
-            &PreInstallHookCtx {
-                version,
-                runtime_version: VFOX_COMPAT_RUNTIME_VERSION,
-            },
+            &PreInstallHookCtx { version },
         )?;
         let resolved_version = result.version.unwrap_or_else(|| version.to_string());
         let main_name = result
@@ -195,7 +191,6 @@ impl Plugin for LuaPlugin {
             &PostInstallHookCtx {
                 root_path: runtime.root_dir.display().to_string(),
                 sdk_info,
-                runtime_version: VFOX_COMPAT_RUNTIME_VERSION,
             },
         )?;
         Ok(())
@@ -214,7 +209,6 @@ impl Plugin for LuaPlugin {
                 },
                 path: runtime.main.path.display().to_string(),
                 sdk_info,
-                runtime_version: VFOX_COMPAT_RUNTIME_VERSION,
             },
         )?;
         Ok(results
@@ -234,14 +228,9 @@ impl Plugin for LuaPlugin {
         previous_version: Option<&str>,
         installed: &[InstalledRuntime],
     ) -> Result<Option<String>, PluginError> {
-        if !self.has_function("PreUse")? && !self.has_function("preUse")? {
+        if !self.has_function("preUse")? {
             return Ok(None);
         }
-        let hook_name = if self.has_function("PreUse")? {
-            "PreUse"
-        } else {
-            "preUse"
-        };
         let installed_sdks = installed
             .iter()
             .map(|runtime| {
@@ -257,14 +246,13 @@ impl Plugin for LuaPlugin {
             })
             .collect::<BTreeMap<_, _>>();
         let result: PreUseHookResult = self.call_hook(
-            hook_name,
+            "preUse",
             &PreUseHookCtx {
                 cwd: cwd.display().to_string(),
                 scope: scope.to_string(),
                 version: requested_version.to_string(),
                 previous_version: previous_version.map(ToString::to_string),
                 installed_sdks,
-                runtime_version: VFOX_COMPAT_RUNTIME_VERSION,
             },
         )?;
         Ok(Some(result.version))
@@ -275,6 +263,7 @@ impl Plugin for LuaPlugin {
         file_name: &str,
         file_path: &Path,
         content: &str,
+        installed_versions: &[String],
     ) -> Result<Option<String>, PluginError> {
         if !self
             .manifest
@@ -286,14 +275,38 @@ impl Plugin for LuaPlugin {
         }
 
         if self.has_function("ParseLegacyFile")? {
-            let result: ParseLegacyFileHookResult = self.call_hook(
-                "ParseLegacyFile",
-                &ParseLegacyFileHookCtx {
-                    filepath: file_path.display().to_string(),
-                    filename: file_name.to_string(),
-                    runtime_version: VFOX_COMPAT_RUNTIME_VERSION,
-                },
-            )?;
+            let function: Function = self
+                .plugin_table
+                .get("ParseLegacyFile")
+                .map_err(|error| PluginError::Backend(error.to_string()))?;
+
+            let ctx = self
+                .lua
+                .create_table()
+                .map_err(|error| PluginError::Backend(error.to_string()))?;
+            ctx.set("filepath", file_path.display().to_string())
+                .map_err(|error| PluginError::Backend(error.to_string()))?;
+            ctx.set("filename", file_name.to_string())
+                .map_err(|error| PluginError::Backend(error.to_string()))?;
+
+            let versions: Vec<String> = installed_versions.to_vec();
+            let get_versions = self
+                .lua
+                .create_function(move |lua, ()| {
+                    let table = lua.create_table()?;
+                    for (i, v) in versions.iter().enumerate() {
+                        table.set(i + 1, v.as_str())?;
+                    }
+                    Ok(table)
+                })
+                .map_err(|error| PluginError::Backend(error.to_string()))?;
+            ctx.set("getInstalledVersions", get_versions)
+                .map_err(|error| PluginError::Backend(error.to_string()))?;
+
+            let result = function
+                .call::<MultiValue>((self.plugin_table.clone(), ctx))
+                .map_err(|error| PluginError::Backend(error.to_string()))?;
+            let result: ParseLegacyFileHookResult = decode_hook_result(&self.lua, result)?;
             let version = result.version.trim().to_string();
             return if version.is_empty() {
                 Ok(None)
@@ -323,11 +336,7 @@ impl Plugin for LuaPlugin {
         };
         let _ = self.call_hook_raw(
             "PreUninstall",
-            &PreUninstallHookCtx {
-                main,
-                sdk_info,
-                runtime_version: VFOX_COMPAT_RUNTIME_VERSION,
-            },
+            &PreUninstallHookCtx { main, sdk_info },
         )?;
         Ok(())
     }
@@ -424,8 +433,8 @@ fn build_checksum(
             value: value.to_string(),
         })
         .or_else(|| {
-            sha512.map(|value| Checksum {
-                algorithm: String::from("sha512"),
+            md5.map(|value| Checksum {
+                algorithm: String::from("md5"),
                 value: value.to_string(),
             })
         })
@@ -436,8 +445,8 @@ fn build_checksum(
             })
         })
         .or_else(|| {
-            md5.map(|value| Checksum {
-                algorithm: String::from("md5"),
+            sha512.map(|value| Checksum {
+                algorithm: String::from("sha512"),
                 value: value.to_string(),
             })
         })
@@ -555,6 +564,7 @@ fn metadata_from_table(plugin_table: &Table, source: &Path) -> Result<MetadataFi
         description: plugin_table.get("description").ok(),
         aliases: plugin_table.get("aliases").unwrap_or_default(),
         homepage: plugin_table.get("homepage").ok(),
+        license: plugin_table.get("license").ok(),
         update_url: plugin_table
             .get("updateUrl")
             .ok()

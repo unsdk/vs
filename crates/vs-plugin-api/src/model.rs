@@ -36,6 +36,9 @@ pub struct PluginManifest {
     /// Plugin homepage or repository.
     #[serde(default)]
     pub homepage: Option<String>,
+    /// Plugin license identifier.
+    #[serde(default)]
+    pub license: Option<String>,
     /// Plugin update URL.
     #[serde(default)]
     pub update_url: Option<String>,

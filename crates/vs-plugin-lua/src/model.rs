@@ -19,6 +19,8 @@ pub struct MetadataFile {
     #[serde(default)]
     pub homepage: Option<String>,
     #[serde(default)]
+    pub license: Option<String>,
+    #[serde(default)]
     pub update_url: Option<String>,
     #[serde(default)]
     pub manifest_url: Option<String>,
@@ -35,7 +37,6 @@ pub struct MetadataFile {
 #[serde(rename_all = "camelCase")]
 pub struct AvailableHookCtx {
     pub args: Vec<String>,
-    pub runtime_version: &'static str,
 }
 
 /// One version candidate returned by the `Available` hook.
@@ -83,7 +84,6 @@ impl From<AvailableHookResultItem> for AvailableVersion {
 #[serde(rename_all = "camelCase")]
 pub struct PreInstallHookCtx<'a> {
     pub version: &'a str,
-    pub runtime_version: &'static str,
 }
 
 /// Install metadata returned by the `PreInstall` hook.
@@ -153,7 +153,6 @@ pub struct EnvKeysHookCtx {
     pub main: InstalledPackageItem,
     pub path: String,
     pub sdk_info: BTreeMap<String, InstalledPackageItem>,
-    pub runtime_version: &'static str,
 }
 
 /// A single environment variable emitted by the `EnvKeys` hook.
@@ -169,7 +168,6 @@ pub struct EnvKeysHookResultItem {
 pub struct PostInstallHookCtx {
     pub root_path: String,
     pub sdk_info: BTreeMap<String, InstalledPackageItem>,
-    pub runtime_version: &'static str,
 }
 
 /// Context passed to the optional `PreUse` hook.
@@ -182,22 +180,12 @@ pub struct PreUseHookCtx {
     #[serde(default)]
     pub previous_version: Option<String>,
     pub installed_sdks: BTreeMap<String, InstalledPackageItem>,
-    pub runtime_version: &'static str,
 }
 
 /// Result returned by the optional `PreUse` hook.
 #[derive(Debug, Deserialize)]
 pub struct PreUseHookResult {
     pub version: String,
-}
-
-/// Context passed to the optional `ParseLegacyFile` hook.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ParseLegacyFileHookCtx {
-    pub filepath: String,
-    pub filename: String,
-    pub runtime_version: &'static str,
 }
 
 /// Result returned by the optional `ParseLegacyFile` hook.
@@ -212,7 +200,6 @@ pub struct ParseLegacyFileHookResult {
 pub struct PreUninstallHookCtx {
     pub main: InstalledPackageItem,
     pub sdk_info: BTreeMap<String, InstalledPackageItem>,
-    pub runtime_version: &'static str,
 }
 
 /// Builds the name-keyed package map exposed to Lua hooks.
@@ -253,6 +240,7 @@ pub fn build_manifest(metadata: MetadataFile, source: &std::path::Path) -> Plugi
         aliases: metadata.aliases,
         version: metadata.version,
         homepage: metadata.homepage,
+        license: metadata.license,
         update_url: metadata.update_url,
         manifest_url: metadata.manifest_url,
         min_runtime_version: metadata.min_runtime_version,

@@ -169,6 +169,12 @@ pub fn register_builtin_modules(lua: &Lua, user_agent: &str) -> Result<(), Plugi
             create_archiver_module(lua).map_err(|error| PluginError::Backend(error.to_string()))?,
         )
         .map_err(|error| PluginError::Backend(error.to_string()))?;
+    preload
+        .set(
+            "file",
+            create_file_module(lua).map_err(|error| PluginError::Backend(error.to_string()))?,
+        )
+        .map_err(|error| PluginError::Backend(error.to_string()))?;
 
     Ok(())
 }
@@ -374,6 +380,61 @@ fn create_strings_module(lua: &Lua) -> LuaResult<mlua::Function> {
             "join",
             lua.create_function(|_, (values, separator): (Vec<String>, String)| {
                 Ok(values.join(&separator))
+            })?,
+        )?;
+        table.set(
+            "trim_prefix",
+            lua.create_function(|_, (input, prefix): (String, String)| {
+                Ok(input
+                    .strip_prefix(prefix.as_str())
+                    .unwrap_or(&input)
+                    .to_string())
+            })?,
+        )?;
+        table.set(
+            "trim_suffix",
+            lua.create_function(|_, (input, suffix): (String, String)| {
+                Ok(input
+                    .strip_suffix(suffix.as_str())
+                    .unwrap_or(&input)
+                    .to_string())
+            })?,
+        )?;
+        table.set(
+            "fields",
+            lua.create_function(|_, input: String| {
+                Ok(input
+                    .split_whitespace()
+                    .map(String::from)
+                    .collect::<Vec<_>>())
+            })?,
+        )?;
+        Ok(table)
+    })
+}
+
+fn create_file_module(lua: &Lua) -> LuaResult<mlua::Function> {
+    lua.create_function(|lua, ()| {
+        let table = lua.create_table()?;
+        table.set(
+            "symlink",
+            lua.create_function(|_, (src, dest): (String, String)| {
+                #[cfg(unix)]
+                {
+                    std::os::unix::fs::symlink(&src, &dest).map_err(mlua::Error::external)?;
+                }
+                #[cfg(windows)]
+                {
+                    let src_path = std::path::Path::new(&src);
+                    if src_path.is_dir() {
+                        std::os::windows::fs::symlink_dir(&src, &dest)
+                            .map_err(mlua::Error::external)?;
+                    } else {
+                        std::os::windows::fs::symlink_file(&src, &dest)
+                            .map_err(mlua::Error::external)?;
+                    }
+                }
+                Ok(())
             })?,
         )?;
         Ok(table)

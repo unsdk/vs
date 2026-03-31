@@ -76,6 +76,7 @@ impl WasiPlugin {
                 aliases: descriptor.plugin.aliases,
                 version: None,
                 homepage: None,
+                license: None,
                 update_url: None,
                 manifest_url: None,
                 min_runtime_version: None,
@@ -150,6 +151,7 @@ impl Plugin for WasiPlugin {
         file_name: &str,
         _file_path: &Path,
         content: &str,
+        _installed_versions: &[String],
     ) -> Result<Option<String>, PluginError> {
         if self.legacy_filenames.iter().any(|name| name == file_name) {
             let trimmed = content.trim();
