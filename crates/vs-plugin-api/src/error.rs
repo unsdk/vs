@@ -23,3 +23,14 @@ pub enum PluginError {
 
 /// Shared result type for plugin operations.
 pub type PluginResult<T> = Result<T, PluginError>;
+
+/// Extension trait to convert any `Display` error into [`PluginError::Backend`].
+pub trait IntoPluginResult<T> {
+    fn into_plugin_result(self) -> Result<T, PluginError>;
+}
+
+impl<T, E: std::fmt::Display> IntoPluginResult<T> for Result<T, E> {
+    fn into_plugin_result(self) -> Result<T, PluginError> {
+        self.map_err(|error| PluginError::Backend(error.to_string()))
+    }
+}

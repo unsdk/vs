@@ -6,8 +6,8 @@ use std::path::{Path, PathBuf};
 
 use mlua::{Function, Lua, LuaSerdeExt, MultiValue, Table, Value};
 use vs_plugin_api::{
-    Checksum, EnvKey, InstallArtifact, InstallPlan, InstallSource, InstalledRuntime, Plugin,
-    PluginError, PluginManifest,
+    Checksum, EnvKey, InstallArtifact, InstallPlan, InstallSource, InstalledRuntime,
+    IntoPluginResult, Plugin, PluginError, PluginManifest,
 };
 
 use crate::model::{
@@ -75,7 +75,7 @@ impl LuaPlugin {
         Ok(!matches!(
             self.plugin_table
                 .get::<Value>(name)
-                .map_err(|error| PluginError::Backend(error.to_string()))?,
+                .into_plugin_result()?,
             Value::Nil
         ))
     }
@@ -88,14 +88,14 @@ impl LuaPlugin {
         let function: Function = self
             .plugin_table
             .get(hook_name)
-            .map_err(|error| PluginError::Backend(error.to_string()))?;
+            .into_plugin_result()?;
         let ctx_value = self
             .lua
             .to_value(ctx)
-            .map_err(|error| PluginError::Backend(error.to_string()))?;
+            .into_plugin_result()?;
         let result = function
             .call::<MultiValue>((self.plugin_table.clone(), ctx_value))
-            .map_err(|error| PluginError::Backend(error.to_string()))?;
+            .into_plugin_result()?;
         decode_hook_result(&self.lua, result)
     }
 
@@ -106,14 +106,14 @@ impl LuaPlugin {
         let function: Function = self
             .plugin_table
             .get(hook_name)
-            .map_err(|error| PluginError::Backend(error.to_string()))?;
+            .into_plugin_result()?;
         let ctx_value = self
             .lua
             .to_value(ctx)
-            .map_err(|error| PluginError::Backend(error.to_string()))?;
+            .into_plugin_result()?;
         function
             .call::<MultiValue>((self.plugin_table.clone(), ctx_value))
-            .map_err(|error| PluginError::Backend(error.to_string()))
+            .into_plugin_result()
     }
 }
 
@@ -278,16 +278,16 @@ impl Plugin for LuaPlugin {
             let function: Function = self
                 .plugin_table
                 .get("ParseLegacyFile")
-                .map_err(|error| PluginError::Backend(error.to_string()))?;
+                .into_plugin_result()?;
 
             let ctx = self
                 .lua
                 .create_table()
-                .map_err(|error| PluginError::Backend(error.to_string()))?;
+                .into_plugin_result()?;
             ctx.set("filepath", file_path.display().to_string())
-                .map_err(|error| PluginError::Backend(error.to_string()))?;
+                .into_plugin_result()?;
             ctx.set("filename", file_name.to_string())
-                .map_err(|error| PluginError::Backend(error.to_string()))?;
+                .into_plugin_result()?;
 
             let versions: Vec<String> = installed_versions.to_vec();
             let get_versions = self
@@ -299,13 +299,13 @@ impl Plugin for LuaPlugin {
                     }
                     Ok(table)
                 })
-                .map_err(|error| PluginError::Backend(error.to_string()))?;
+                .into_plugin_result()?;
             ctx.set("getInstalledVersions", get_versions)
-                .map_err(|error| PluginError::Backend(error.to_string()))?;
+                .into_plugin_result()?;
 
             let result = function
                 .call::<MultiValue>((self.plugin_table.clone(), ctx))
-                .map_err(|error| PluginError::Backend(error.to_string()))?;
+                .into_plugin_result()?;
             let result: ParseLegacyFileHookResult = decode_hook_result(&self.lua, result)?;
             let version = result.version.trim().to_string();
             return if version.is_empty() {
@@ -360,7 +360,7 @@ where
         return Err(PluginError::NoResultProvided);
     }
     lua.from_value(first)
-        .map_err(|error| PluginError::Backend(error.to_string()))
+        .into_plugin_result()
 }
 
 fn parse_install_source(
@@ -456,29 +456,29 @@ fn set_runtime_globals(lua: &Lua, source: &Path) -> Result<(), PluginError> {
     let globals = lua.globals();
     globals
         .set("OS_TYPE", runtime_os_type())
-        .map_err(|error| PluginError::Backend(error.to_string()))?;
+        .into_plugin_result()?;
     globals
         .set("ARCH_TYPE", runtime_arch_type())
-        .map_err(|error| PluginError::Backend(error.to_string()))?;
+        .into_plugin_result()?;
 
     let runtime = lua
         .create_table()
-        .map_err(|error| PluginError::Backend(error.to_string()))?;
+        .into_plugin_result()?;
     runtime
         .set("osType", runtime_os_type())
-        .map_err(|error| PluginError::Backend(error.to_string()))?;
+        .into_plugin_result()?;
     runtime
         .set("archType", runtime_arch_type())
-        .map_err(|error| PluginError::Backend(error.to_string()))?;
+        .into_plugin_result()?;
     runtime
         .set("version", VFOX_COMPAT_RUNTIME_VERSION)
-        .map_err(|error| PluginError::Backend(error.to_string()))?;
+        .into_plugin_result()?;
     runtime
         .set("pluginDirPath", source.display().to_string())
-        .map_err(|error| PluginError::Backend(error.to_string()))?;
+        .into_plugin_result()?;
     globals
         .set("RUNTIME", runtime)
-        .map_err(|error| PluginError::Backend(error.to_string()))
+        .into_plugin_result()
 }
 
 fn load_plugin_scripts(lua: &Lua, source: &Path) -> Result<(), PluginError> {

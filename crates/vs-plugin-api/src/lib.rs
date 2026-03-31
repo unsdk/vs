@@ -4,7 +4,7 @@ mod error;
 mod host;
 mod model;
 
-pub use error::{PluginError, PluginResult};
+pub use error::{IntoPluginResult, PluginError, PluginResult};
 pub use host::Plugin;
 pub use model::{
     AvailableAddition, AvailableVersion, Checksum, EnvKey, InstallArtifact, InstallPlan,
