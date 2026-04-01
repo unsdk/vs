@@ -7,7 +7,23 @@ This guide walks through the fastest path from a clean machine to a working `vs`
 
 ## 1. Install `vs`
 
-<Tabs items={['Scripts', 'Cargo release', 'GitHub', 'Local build']} groupId="install-method">
+<Tabs items={['Homebrew', 'Cargo release', 'GitHub', 'Scripts', 'Local build']} groupId="install-method">
+  <Tab value="Homebrew">
+
+  Install from the Homebrew tap:
+
+  ```bash
+  brew tap unsdk/tap
+  brew install vs
+  ```
+
+  Or in one command:
+
+  ```bash
+  brew install unsdk/tap/vs
+  ```
+
+  </Tab>
   <Tab value="Cargo release">
 
   Install the latest published release from crates.io:
@@ -41,11 +57,11 @@ This guide walks through the fastest path from a clean machine to a working `vs`
   To install a specific release or variant:
 
   ```bash
-  curl -fsSL https://raw.githubusercontent.com/unsdk/vs/main/scripts/install.sh | bash -s -- --version v0.1.0 --variant lua
+  curl -fsSL https://raw.githubusercontent.com/unsdk/vs/main/scripts/install.sh | bash -s -- --version v0.0.2 --variant lua
   ```
 
   ```powershell
-  & ([scriptblock]::Create((irm https://raw.githubusercontent.com/unsdk/vs/main/scripts/install.ps1))) -Version v0.1.0 -Variant lua
+  & ([scriptblock]::Create((irm https://raw.githubusercontent.com/unsdk/vs/main/scripts/install.ps1))) -Version v0.0.2 -Variant lua
   ```
 
   </Tab>
