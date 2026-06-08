@@ -56,6 +56,7 @@ crates=(
   vs-test-support
   vs-core
   vs-cli
+  vs
 )
 
 for crate in "${crates[@]}"; do

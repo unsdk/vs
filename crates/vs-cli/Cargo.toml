@@ -6,7 +6,7 @@ license.workspace = true
 rust-version.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "Command-line interface for the vs version manager."
+description = "Command dispatcher library backing the vs version manager CLI."
 readme = "README.md"
 
 [features]
@@ -14,10 +14,6 @@ default = ["full"]
 full = ["lua", "wasi"]
 lua = ["vs-core/lua"]
 wasi = ["vs-core/wasi"]
-
-[[bin]]
-name = "vs"
-path = "src/main.rs"
 
 [dependencies]
 anyhow.workspace = true
@@ -29,10 +25,6 @@ vs-config.workspace = true
 vs-core.workspace = true
 vs-plugin-api.workspace = true
 vs-registry.workspace = true
-
-[dev-dependencies]
-tempfile.workspace = true
-vs-test-support.workspace = true
 
 [lints]
 workspace = true

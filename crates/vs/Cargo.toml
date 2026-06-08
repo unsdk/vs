@@ -1,0 +1,31 @@
+[package]
+name = "vs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "A cross-platform runtime version manager inspired by vfox."
+readme = "README.md"
+
+[features]
+default = ["full"]
+full = ["lua", "wasi"]
+lua = ["vs-cli/lua"]
+wasi = ["vs-cli/wasi"]
+
+[[bin]]
+name = "vs"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+vs-cli.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+vs-test-support.workspace = true
+
+[lints]
+workspace = true

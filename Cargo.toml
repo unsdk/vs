@@ -36,7 +36,8 @@ toml = "0.8.20"
 walkdir = "2.5.0"
 xz2 = "0.1.7"
 zip = { version = "2.4.2", default-features = false, features = ["deflate"] }
-vs-cli = { version = "0.0.2", path = "crates/vs-cli" }
+vs = { version = "0.0.2", path = "crates/vs" }
+vs-cli = { version = "0.0.2", path = "crates/vs-cli", default-features = false }
 vs-config = { version = "0.0.2", path = "crates/vs-config" }
 vs-core = { version = "0.0.2", path = "crates/vs-core", default-features = false }
 vs-installer = { version = "0.0.2", path = "crates/vs-installer" }

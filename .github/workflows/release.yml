@@ -44,7 +44,7 @@ jobs:
         run: python3 ./scripts/github-actions/update_workspace_version.py
 
       - name: Refresh lockfile
-        run: cargo check -p vs-cli --all-features
+        run: cargo check -p vs --all-features
 
       - name: Commit release version
         shell: bash

@@ -2103,6 +2103,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
+name = "vs"
+version = "0.0.2"
+dependencies = [
+ "anyhow",
+ "tempfile",
+ "vs-cli",
+ "vs-test-support",
+]
+
+[[package]]
 name = "vs-cli"
 version = "0.0.2"
 dependencies = [
@@ -2111,12 +2121,10 @@ dependencies = [
  "clap_complete",
  "dialoguer",
  "fuzzy-matcher",
- "tempfile",
  "vs-config",
  "vs-core",
  "vs-plugin-api",
  "vs-registry",
- "vs-test-support",
 ]
 
 [[package]]

@@ -68,7 +68,7 @@ The design favors small modules, explicit crate boundaries, and testable service
 
 ## Feature flags
 
-`vs-cli` supports backend feature gating:
+The `vs` binary crate supports backend feature gating (forwarded to `vs-cli`):
 
 - `lua`
 - `wasi`
@@ -76,17 +76,17 @@ The design favors small modules, explicit crate boundaries, and testable service
 Examples:
 
 ```bash
-cargo build -p vs-cli --no-default-features --features lua
-cargo build -p vs-cli --no-default-features --features wasi
-cargo build -p vs-cli --no-default-features --features full
+cargo build -p vs --no-default-features --features lua
+cargo build -p vs --no-default-features --features wasi
+cargo build -p vs --no-default-features --features full
 ```
 
 For the smallest binaries, use the dedicated size-first profile:
 
 ```bash
-cargo build -p vs-cli --profile min-size --no-default-features
-cargo build -p vs-cli --profile min-size --no-default-features --features wasi
-cargo build -p vs-cli --profile min-size --no-default-features --features lua
+cargo build -p vs --profile min-size --no-default-features
+cargo build -p vs --profile min-size --no-default-features --features wasi
+cargo build -p vs --profile min-size --no-default-features --features lua
 ```
 
 The standard `release` profile now strips symbols and enables LTO. The `min-size`
@@ -97,7 +97,8 @@ When the `lua` feature is enabled and `registry.address` is unset, `vs` defaults
 
 ## Workspace crates
 
-- `vs-cli`: CLI entrypoint and command parsing
+- `vs`: thin `vs` binary entry point (delegates to `vs-cli`)
+- `vs-cli`: CLI command dispatcher library and argument parsing
 - `vs-core`: application orchestration and use-case services
 - `vs-config`: home, config, and version resolution
 - `vs-registry`: registry persistence and plugin lookup

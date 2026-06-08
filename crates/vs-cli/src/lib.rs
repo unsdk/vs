@@ -1,4 +1,4 @@
-//! Entry point and command dispatcher for the `vs` CLI binary.
+//! Command dispatcher library backing the `vs` CLI binary.
 
 mod cli;
 mod command;
@@ -26,16 +26,19 @@ use crate::tui::{
     should_use_interactive_tui,
 };
 
-fn main() -> Result<()> {
+/// Parse command-line arguments and run the `vs` CLI.
+///
+/// This is the shared entry point invoked by the thin `vs` binary crate.
+pub fn run() -> Result<()> {
     let cli = Cli::parse();
-    let exit_code = run(cli)?;
+    let exit_code = dispatch(cli)?;
     if exit_code != 0 {
         process::exit(exit_code);
     }
     Ok(())
 }
 
-fn run(cli: Cli) -> Result<i32> {
+fn dispatch(cli: Cli) -> Result<i32> {
     match cli.command {
         Commands::Completion(args) | Commands::Complete(args) => {
             print_completion(args)?;
