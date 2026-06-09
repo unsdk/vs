@@ -1,10 +1,10 @@
 //! Root view: owns all UI state and the top-level window layout.
 
 use gpui::prelude::*;
-use gpui::{div, px, Context, Entity, IntoElement, ParentElement, SharedString, Styled, Window};
+use gpui::{Context, Entity, IntoElement, ParentElement, SharedString, Styled, Window, div, px};
+use gpui_component::WindowExt;
 use gpui_component::input::InputState;
 use gpui_component::notification::{Notification, NotificationType};
-use gpui_component::WindowExt;
 
 use vs_core::CoreError;
 
@@ -42,8 +42,7 @@ pub struct RootView {
 impl RootView {
     pub fn new(service: AppService, window: &mut Window, cx: &mut Context<'_, Self>) -> Self {
         let filter_input = cx.new(|cx| InputState::new(window, cx).placeholder("Filter tools…"));
-        let search_input =
-            cx.new(|cx| InputState::new(window, cx).placeholder("Search versions…"));
+        let search_input = cx.new(|cx| InputState::new(window, cx).placeholder("Search versions…"));
         let add_filter_input =
             cx.new(|cx| InputState::new(window, cx).placeholder("Search registry…"));
         let add_source_input =
@@ -76,7 +75,9 @@ impl RootView {
     pub(crate) fn reload_tools(&self, cx: &mut Context<'_, Self>) {
         let service = self.service.clone();
         cx.spawn(async move |this, cx| {
-            let result = cx.background_spawn(async move { service.tool_rows() }).await;
+            let result = cx
+                .background_spawn(async move { service.tool_rows() })
+                .await;
             this.update(cx, |this, cx| {
                 match result {
                     Ok(rows) => this.tools = rows,
@@ -117,7 +118,9 @@ impl RootView {
                 .background_spawn(async move { svc_installed.installed_rows(&name_installed) })
                 .await;
             let available = cx
-                .background_spawn(async move { svc_available.search_available(&name_available, "") })
+                .background_spawn(
+                    async move { svc_available.search_available(&name_available, "") },
+                )
                 .await;
             this.update(cx, |this, cx| {
                 match installed {
@@ -273,17 +276,21 @@ impl RootView {
                     .gap_1()
                     .items_center()
                     .when(self.busy > 0, |el| el.child(div().child("working…")))
-                    .child(Button::new("refresh-registry").label("Refresh registry").on_click(
-                        cx.listener(|this, _ev, window, cx| {
-                            this.run_action(window, cx, |svc| {
-                                svc.refresh_registry()
-                                    .map(|n| format!("Registry refreshed: {n} plugins"))
-                            });
-                        }),
-                    ))
-                    .child(Button::new("scope").label(scope_label).on_click(
-                        cx.listener(|this, _ev, _window, cx| this.next_scope(cx)),
-                    )),
+                    .child(
+                        Button::new("refresh-registry")
+                            .label("Refresh registry")
+                            .on_click(cx.listener(|this, _ev, window, cx| {
+                                this.run_action(window, cx, |svc| {
+                                    svc.refresh_registry()
+                                        .map(|n| format!("Registry refreshed: {n} plugins"))
+                                });
+                            })),
+                    )
+                    .child(
+                        Button::new("scope")
+                            .label(scope_label)
+                            .on_click(cx.listener(|this, _ev, _window, cx| this.next_scope(cx))),
+                    ),
             )
     }
 }

@@ -1,10 +1,10 @@
 //! Detail pane render + version actions for the selected tool.
 
 use gpui::prelude::*;
-use gpui::{div, Context, IntoElement, ParentElement, Styled, Window};
+use gpui::{Context, IntoElement, ParentElement, Styled, Window, div};
+use gpui_component::Disableable;
 use gpui_component::button::Button;
 use gpui_component::input::Input;
-use gpui_component::Disableable;
 
 use crate::model::{ScopeChoice, VersionRow};
 use crate::ui::RootView;
@@ -53,29 +53,33 @@ impl RootView {
                         div()
                             .flex()
                             .gap_1()
-                            .child(Button::new("update-plugin").label("Update plugin").on_click(
-                                cx.listener(move |this, _ev, window, cx| {
-                                    let n = update_name.clone();
-                                    this.run_action(window, cx, move |svc| {
-                                        svc.update_plugin(&n).map(|()| format!("Updated {n}"))
-                                    });
-                                }),
-                            ))
-                            .child(Button::new("remove-plugin").label("Remove plugin").on_click(
-                                cx.listener(move |this, _ev, window, cx| {
-                                    let n = remove_name.clone();
-                                    this.selected = None;
-                                    this.run_action(window, cx, move |svc| {
-                                        svc.remove_plugin(&n).map(|removed| {
-                                            if removed {
-                                                format!("Removed {n}")
-                                            } else {
-                                                format!("{n} was not present")
-                                            }
-                                        })
-                                    });
-                                }),
-                            )),
+                            .child(
+                                Button::new("update-plugin")
+                                    .label("Update plugin")
+                                    .on_click(cx.listener(move |this, _ev, window, cx| {
+                                        let n = update_name.clone();
+                                        this.run_action(window, cx, move |svc| {
+                                            svc.update_plugin(&n).map(|()| format!("Updated {n}"))
+                                        });
+                                    })),
+                            )
+                            .child(
+                                Button::new("remove-plugin")
+                                    .label("Remove plugin")
+                                    .on_click(cx.listener(move |this, _ev, window, cx| {
+                                        let n = remove_name.clone();
+                                        this.selected = None;
+                                        this.run_action(window, cx, move |svc| {
+                                            svc.remove_plugin(&n).map(|removed| {
+                                                if removed {
+                                                    format!("Removed {n}")
+                                                } else {
+                                                    format!("{n} was not present")
+                                                }
+                                            })
+                                        });
+                                    })),
+                            ),
                     )
             })
             .child(div().text_xs().child("INSTALLED"))
@@ -87,9 +91,9 @@ impl RootView {
                     .gap_1()
                     .child(div().flex_1().child(Input::new(&self.search_input)))
                     .child(
-                        Button::new("search").label("Search").on_click(
-                            cx.listener(|this, _ev, _window, cx| this.run_search(cx)),
-                        ),
+                        Button::new("search")
+                            .label("Search")
+                            .on_click(cx.listener(|this, _ev, _window, cx| this.run_search(cx))),
                     ),
             )
             .children(available_rows)
@@ -132,28 +136,25 @@ impl RootView {
                             });
                         },
                     )))
-                    .child(
-                        Button::new(("uninstall", ix)).label("Uninstall").on_click(cx.listener(
-                            move |this, _ev, window, cx| {
-                                let (n, v) =
-                                    (uninstall_name.clone(), uninstall_version.clone());
-                                this.run_action(window, cx, move |svc| {
-                                    svc.uninstall(&n, &v).map(|res| {
-                                        if res.removed {
-                                            match res.auto_switched {
-                                                Some(sw) => format!(
-                                                    "Uninstalled {n}@{v}; auto-switched to {sw}"
-                                                ),
-                                                None => format!("Uninstalled {n}@{v}"),
-                                            }
-                                        } else {
-                                            format!("{n}@{v} was not installed")
+                    .child(Button::new(("uninstall", ix)).label("Uninstall").on_click(
+                        cx.listener(move |this, _ev, window, cx| {
+                            let (n, v) = (uninstall_name.clone(), uninstall_version.clone());
+                            this.run_action(window, cx, move |svc| {
+                                svc.uninstall(&n, &v).map(|res| {
+                                    if res.removed {
+                                        match res.auto_switched {
+                                            Some(sw) => format!(
+                                                "Uninstalled {n}@{v}; auto-switched to {sw}"
+                                            ),
+                                            None => format!("Uninstalled {n}@{v}"),
                                         }
-                                    })
-                                });
-                            },
-                        )),
-                    ),
+                                    } else {
+                                        format!("{n}@{v} was not installed")
+                                    }
+                                })
+                            });
+                        }),
+                    )),
             )
     }
 

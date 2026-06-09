@@ -1,7 +1,7 @@
 //! Sidebar render + interactions (filter, tool selection, Add button).
 
 use gpui::prelude::*;
-use gpui::{div, px, Context, IntoElement, ParentElement, Styled, Window};
+use gpui::{Context, IntoElement, ParentElement, Styled, Window, div, px};
 use gpui_component::button::Button;
 use gpui_component::input::Input;
 

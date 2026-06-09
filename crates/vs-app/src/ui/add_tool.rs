@@ -1,13 +1,13 @@
 //! Add-tool panel: browse the registry or add a plugin from a source.
 
 use gpui::prelude::*;
-use gpui::{div, Context, IntoElement, ParentElement, Styled, Window};
+use gpui::{Context, IntoElement, ParentElement, Styled, Window, div};
 use gpui_component::button::Button;
 use gpui_component::input::Input;
 
 use crate::model::{AddSource, BackendChoice};
-use crate::ui::root::AddTab;
 use crate::ui::RootView;
+use crate::ui::root::AddTab;
 
 impl RootView {
     pub(crate) fn render_add_panel(
@@ -28,12 +28,14 @@ impl RootView {
                     .items_center()
                     .justify_between()
                     .child(div().text_lg().child("Add a tool"))
-                    .child(Button::new("add-close").label("Close").on_click(
-                        cx.listener(|this, _ev, _window, cx| {
-                            this.show_add = false;
-                            cx.notify();
-                        }),
-                    )),
+                    .child(
+                        Button::new("add-close")
+                            .label("Close")
+                            .on_click(cx.listener(|this, _ev, _window, cx| {
+                                this.show_add = false;
+                                cx.notify();
+                            })),
+                    ),
             )
             .child(
                 div()
@@ -45,12 +47,14 @@ impl RootView {
                             cx.notify();
                         }),
                     ))
-                    .child(Button::new("tab-source").label("From source").on_click(
-                        cx.listener(|this, _ev, _window, cx| {
-                            this.add_tab = AddTab::Source;
-                            cx.notify();
-                        }),
-                    )),
+                    .child(
+                        Button::new("tab-source")
+                            .label("From source")
+                            .on_click(cx.listener(|this, _ev, _window, cx| {
+                                this.add_tab = AddTab::Source;
+                                cx.notify();
+                            })),
+                    ),
             )
             .child(match tab {
                 AddTab::Registry => self.render_add_registry(cx).into_any_element(),
@@ -79,16 +83,18 @@ impl RootView {
                     .justify_between()
                     .py_1()
                     .child(div().child(name))
-                    .child(Button::new(("add-reg", ix)).label("Add").on_click(
-                        cx.listener(move |this, _ev, window, cx| {
-                            let n = add_name.clone();
-                            this.show_add = false;
-                            this.run_action(window, cx, move |svc| {
-                                svc.add(AddSource::Registry { name: n.clone() })
-                                    .map(|()| format!("Added {n}"))
-                            });
-                        }),
-                    )),
+                    .child(
+                        Button::new(("add-reg", ix))
+                            .label("Add")
+                            .on_click(cx.listener(move |this, _ev, window, cx| {
+                                let n = add_name.clone();
+                                this.show_add = false;
+                                this.run_action(window, cx, move |svc| {
+                                    svc.add(AddSource::Registry { name: n.clone() })
+                                        .map(|()| format!("Added {n}"))
+                                });
+                            })),
+                    ),
             );
         }
         div()
@@ -112,43 +118,49 @@ impl RootView {
                     .flex()
                     .gap_1()
                     .child(div().child(format!("backend: {}", backend_label(backend))))
-                    .child(Button::new("backend-lua").label("Lua").on_click(
-                        cx.listener(|this, _ev, _window, cx| {
-                            this.add_backend = BackendChoice::Lua;
-                            cx.notify();
-                        }),
-                    ))
-                    .child(Button::new("backend-wasi").label("Wasi").on_click(
-                        cx.listener(|this, _ev, _window, cx| {
-                            this.add_backend = BackendChoice::Wasi;
-                            cx.notify();
-                        }),
-                    )),
+                    .child(
+                        Button::new("backend-lua")
+                            .label("Lua")
+                            .on_click(cx.listener(|this, _ev, _window, cx| {
+                                this.add_backend = BackendChoice::Lua;
+                                cx.notify();
+                            })),
+                    )
+                    .child(
+                        Button::new("backend-wasi")
+                            .label("Wasi")
+                            .on_click(cx.listener(|this, _ev, _window, cx| {
+                                this.add_backend = BackendChoice::Wasi;
+                                cx.notify();
+                            })),
+                    ),
             )
-            .child(Button::new("add-source-submit").label("Add").on_click(
-                cx.listener(move |this, _ev, window, cx| {
-                    let source = this.add_source_input.read(cx).value().to_string();
-                    let alias_raw = this.add_alias_input.read(cx).value().to_string();
-                    let alias = if alias_raw.trim().is_empty() {
-                        None
-                    } else {
-                        Some(alias_raw)
-                    };
-                    if source.trim().is_empty() {
-                        return;
-                    }
-                    this.show_add = false;
-                    let backend = this.add_backend;
-                    this.run_action(window, cx, move |svc| {
-                        svc.add(AddSource::Source {
-                            source: source.clone(),
-                            alias,
-                            backend,
-                        })
-                        .map(|()| format!("Added from {source}"))
-                    });
-                }),
-            ))
+            .child(
+                Button::new("add-source-submit")
+                    .label("Add")
+                    .on_click(cx.listener(move |this, _ev, window, cx| {
+                        let source = this.add_source_input.read(cx).value().to_string();
+                        let alias_raw = this.add_alias_input.read(cx).value().to_string();
+                        let alias = if alias_raw.trim().is_empty() {
+                            None
+                        } else {
+                            Some(alias_raw)
+                        };
+                        if source.trim().is_empty() {
+                            return;
+                        }
+                        this.show_add = false;
+                        let backend = this.add_backend;
+                        this.run_action(window, cx, move |svc| {
+                            svc.add(AddSource::Source {
+                                source: source.clone(),
+                                alias,
+                                backend,
+                            })
+                            .map(|()| format!("Added from {source}"))
+                        });
+                    })),
+            )
     }
 }
 

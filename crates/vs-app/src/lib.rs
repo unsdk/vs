@@ -5,8 +5,8 @@ mod service;
 mod ui;
 
 pub use model::{
-    AddSource, BackendChoice, ScopeChoice, ToolRow, VersionRow,
-    available_rows, filter_tool_rows, installed_rows, merge_tool_rows,
+    AddSource, BackendChoice, ScopeChoice, ToolRow, VersionRow, available_rows, filter_tool_rows,
+    installed_rows, merge_tool_rows,
 };
 pub use service::AppService;
 

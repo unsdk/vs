@@ -28,7 +28,11 @@ pub enum ScopeChoice {
 
 impl ScopeChoice {
     pub fn all() -> [ScopeChoice; 3] {
-        [ScopeChoice::Project, ScopeChoice::Global, ScopeChoice::Session]
+        [
+            ScopeChoice::Project,
+            ScopeChoice::Global,
+            ScopeChoice::Session,
+        ]
     }
 
     pub fn label(self) -> &'static str {
@@ -67,8 +71,14 @@ impl BackendChoice {
 /// How the user wants to add a tool in the Add-tool dialog.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AddSource {
-    Registry { name: String },
-    Source { source: String, alias: Option<String>, backend: BackendChoice },
+    Registry {
+        name: String,
+    },
+    Source {
+        source: String,
+        alias: Option<String>,
+        backend: BackendChoice,
+    },
 }
 
 /// Merge the list of added plugin names with their current-version statuses,
@@ -84,7 +94,10 @@ pub fn merge_tool_rows(
                 .iter()
                 .find(|(plugin, _)| *plugin == name)
                 .and_then(|(_, version)| version.clone());
-            ToolRow { name, current_version }
+            ToolRow {
+                name,
+                current_version,
+            }
         })
         .collect();
     rows.sort_by(|a, b| a.name.cmp(&b.name));
@@ -97,7 +110,11 @@ pub fn installed_rows(installed: Vec<String>, current: Option<&str>) -> Vec<Vers
         .into_iter()
         .map(|version| {
             let is_current = current == Some(version.as_str());
-            VersionRow { version, installed: true, current: is_current }
+            VersionRow {
+                version,
+                installed: true,
+                current: is_current,
+            }
         })
         .collect()
 }
@@ -109,7 +126,11 @@ pub fn available_rows(found: Vec<String>, installed: &[String]) -> Vec<VersionRo
         .into_iter()
         .map(|version| {
             let already = installed.iter().any(|v| v == &version);
-            VersionRow { version, installed: already, current: false }
+            VersionRow {
+                version,
+                installed: already,
+                current: false,
+            }
         })
         .collect()
 }
@@ -156,8 +177,14 @@ mod tests {
         assert_eq!(
             rows,
             vec![
-                ToolRow { name: "nodejs".into(), current_version: Some("20.11.1".into()) },
-                ToolRow { name: "python".into(), current_version: None },
+                ToolRow {
+                    name: "nodejs".into(),
+                    current_version: Some("20.11.1".into())
+                },
+                ToolRow {
+                    name: "python".into(),
+                    current_version: None
+                },
             ]
         );
     }
@@ -171,8 +198,16 @@ mod tests {
         assert_eq!(
             rows,
             vec![
-                VersionRow { version: "20.11.1".into(), installed: true, current: true },
-                VersionRow { version: "18.19.0".into(), installed: true, current: false },
+                VersionRow {
+                    version: "20.11.1".into(),
+                    installed: true,
+                    current: true
+                },
+                VersionRow {
+                    version: "18.19.0".into(),
+                    installed: true,
+                    current: false
+                },
             ]
         );
     }
@@ -186,8 +221,16 @@ mod tests {
         assert_eq!(
             rows,
             vec![
-                VersionRow { version: "21.6.0".into(), installed: false, current: false },
-                VersionRow { version: "20.11.1".into(), installed: true, current: false },
+                VersionRow {
+                    version: "21.6.0".into(),
+                    installed: false,
+                    current: false
+                },
+                VersionRow {
+                    version: "20.11.1".into(),
+                    installed: true,
+                    current: false
+                },
             ]
         );
     }
@@ -195,8 +238,14 @@ mod tests {
     #[test]
     fn filter_tool_rows_is_case_insensitive_substring() {
         let rows = vec![
-            ToolRow { name: "nodejs".into(), current_version: None },
-            ToolRow { name: "python".into(), current_version: None },
+            ToolRow {
+                name: "nodejs".into(),
+                current_version: None,
+            },
+            ToolRow {
+                name: "python".into(),
+                current_version: None,
+            },
         ];
         let filtered = filter_tool_rows(&rows, "PY");
         assert_eq!(filtered.len(), 1);

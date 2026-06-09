@@ -5,7 +5,7 @@ use std::sync::Arc;
 use vs_core::{App, CoreError, InstalledVersion, UninstallResult};
 
 use crate::model::{
-    available_rows, installed_rows, merge_tool_rows, AddSource, ScopeChoice, ToolRow, VersionRow,
+    AddSource, ScopeChoice, ToolRow, VersionRow, available_rows, installed_rows, merge_tool_rows,
 };
 
 /// Blocking, UI-agnostic facade over `vs_core::App`.
@@ -19,7 +19,9 @@ pub struct AppService {
 
 impl AppService {
     pub fn new(core: App) -> Self {
-        Self { core: Arc::new(core) }
+        Self {
+            core: Arc::new(core),
+        }
     }
 
     /// Sidebar: added tools with their current version (active scope).
@@ -105,7 +107,11 @@ impl AppService {
             AddSource::Registry { name } => {
                 self.core.add_plugin(Some(&name), None, None, None)?;
             }
-            AddSource::Source { source, alias, backend } => {
+            AddSource::Source {
+                source,
+                alias,
+                backend,
+            } => {
                 self.core.add_plugin(
                     None,
                     Some(source),
