@@ -52,6 +52,14 @@ impl RootView {
                     .flex_1()
                     .overflow_y_scrollbar()
                     .child(div().text_xs().child("TOOLS"))
+                    .when(self.tools.is_empty(), |el| {
+                        el.child(
+                            div()
+                                .p_2()
+                                .text_xs()
+                                .child("No tools yet — click ＋ Add to add one."),
+                        )
+                    })
                     .children(visible.into_iter().enumerate().map(|(ix, tool)| {
                         let name = tool.name.clone();
                         let is_selected = selected.as_deref() == Some(name.as_str());
