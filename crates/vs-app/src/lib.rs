@@ -11,9 +11,27 @@ pub use model::{
 pub use service::AppService;
 
 use anyhow::Result;
+use gpui::{AppContext as _, Application, WindowOptions};
+use gpui_component::Root;
 
-/// Launch the GUI application. Wired up fully in later tasks.
+use crate::ui::RootView;
+
+/// Launch the GUI application.
 pub fn run() -> Result<()> {
-    // Replaced in Task 4 with the gpui Application bootstrap.
+    let core = vs_core::App::from_env()?;
+    let service = AppService::new(core);
+
+    Application::new().run(move |cx| {
+        gpui_component::init(cx);
+        let opened = cx.open_window(WindowOptions::default(), |window, cx| {
+            let view = cx.new(|cx| RootView::new(service.clone(), window, cx));
+            cx.new(|cx| Root::new(view, window, cx))
+        });
+        if let Err(err) = opened {
+            eprintln!("vs-app: failed to open window: {err}");
+            cx.quit();
+        }
+    });
+
     Ok(())
 }
