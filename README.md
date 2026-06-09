@@ -98,6 +98,7 @@ When the `lua` feature is enabled and `registry.address` is unset, `vs` defaults
 ## Workspace crates
 
 - `vs`: thin `vs` binary entry point (delegates to `vs-cli`)
+- `vs-app`: cross-platform desktop GUI (gpui + gpui-component)
 - `vs-cli`: CLI command dispatcher library and argument parsing
 - `vs-core`: application orchestration and use-case services
 - `vs-config`: home, config, and version resolution

@@ -27,6 +27,15 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
+      - name: Install gpui system dependencies (Linux)
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libxcb-composite0-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
+            libxkbcommon-x11-dev libwayland-dev libssl-dev libasound2-dev libfontconfig-dev \
+            libgl1-mesa-dev libvulkan-dev vulkan-tools mesa-vulkan-drivers cmake clang
+
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
