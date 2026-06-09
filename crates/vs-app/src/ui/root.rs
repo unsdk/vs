@@ -11,6 +11,13 @@ use vs_core::CoreError;
 use crate::model::{ScopeChoice, ToolRow, VersionRow};
 use crate::service::AppService;
 
+/// Which tab the Add-tool panel is showing.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum AddTab {
+    Registry,
+    Source,
+}
+
 /// Single source of truth for the GUI.
 pub struct RootView {
     pub(crate) service: AppService,
@@ -23,6 +30,13 @@ pub struct RootView {
     pub(crate) search_input: Entity<InputState>,
     /// Number of in-flight background operations; used to show a busy hint.
     pub(crate) busy: u32,
+    pub(crate) show_add: bool,
+    pub(crate) add_tab: AddTab,
+    pub(crate) add_registry: Vec<String>,
+    pub(crate) add_filter_input: Entity<InputState>,
+    pub(crate) add_source_input: Entity<InputState>,
+    pub(crate) add_alias_input: Entity<InputState>,
+    pub(crate) add_backend: crate::model::BackendChoice,
 }
 
 impl RootView {
@@ -30,6 +44,12 @@ impl RootView {
         let filter_input = cx.new(|cx| InputState::new(window, cx).placeholder("Filter tools…"));
         let search_input =
             cx.new(|cx| InputState::new(window, cx).placeholder("Search versions…"));
+        let add_filter_input =
+            cx.new(|cx| InputState::new(window, cx).placeholder("Search registry…"));
+        let add_source_input =
+            cx.new(|cx| InputState::new(window, cx).placeholder("git URL or local path"));
+        let add_alias_input =
+            cx.new(|cx| InputState::new(window, cx).placeholder("alias (optional)"));
         let view = Self {
             service,
             tools: Vec::new(),
@@ -40,6 +60,13 @@ impl RootView {
             filter_input,
             search_input,
             busy: 0,
+            show_add: false,
+            add_tab: AddTab::Registry,
+            add_registry: Vec::new(),
+            add_filter_input,
+            add_source_input,
+            add_alias_input,
+            add_backend: crate::model::BackendChoice::Lua,
         };
         view.reload_tools(cx);
         view
@@ -108,8 +135,31 @@ impl RootView {
         .detach();
     }
 
-    pub(crate) fn open_add_tool(&mut self, _window: &mut Window, _cx: &mut Context<'_, Self>) {
-        // Implemented in Task 7.
+    /// Open the Add-tool panel and load the registry plugin list.
+    pub(crate) fn open_add_tool(&mut self, _window: &mut Window, cx: &mut Context<'_, Self>) {
+        self.show_add = true;
+        self.add_tab = AddTab::Registry;
+        self.load_registry(cx);
+        cx.notify();
+    }
+
+    /// Load installable plugin names from the registry in the background.
+    pub(crate) fn load_registry(&self, cx: &mut Context<'_, Self>) {
+        let service = self.service.clone();
+        cx.spawn(async move |this, cx| {
+            let names = cx
+                .background_spawn(async move { service.registry_plugin_names() })
+                .await;
+            this.update(cx, |this, cx| {
+                match names {
+                    Ok(names) => this.add_registry = names,
+                    Err(err) => this.deferred_error(err, cx),
+                }
+                cx.notify();
+            })
+            .ok();
+        })
+        .detach();
     }
 
     /// Run a blocking `service` operation off the UI thread, toast the outcome,
@@ -172,18 +222,22 @@ impl RootView {
 
 impl Render for RootView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<'_, Self>) -> impl IntoElement {
+        let body = if self.show_add {
+            self.render_add_panel(window, cx).into_any_element()
+        } else {
+            div()
+                .flex()
+                .flex_1()
+                .child(self.render_sidebar(window, cx))
+                .child(self.render_detail(window, cx))
+                .into_any_element()
+        };
         div()
             .size_full()
             .flex()
             .flex_col()
             .child(self.render_title_bar(window, cx))
-            .child(
-                div()
-                    .flex()
-                    .flex_1()
-                    .child(self.render_sidebar(window, cx))
-                    .child(self.render_detail(window, cx)),
-            )
+            .child(body)
     }
 }
 
