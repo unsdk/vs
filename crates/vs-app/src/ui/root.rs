@@ -65,6 +65,50 @@ impl RootView {
     pub(crate) fn deferred_error(&self, err: CoreError, _cx: &mut Context<'_, Self>) {
         eprintln!("vs-app: {err}");
     }
+
+    /// Select a tool and load its versions.
+    pub(crate) fn select_tool(&mut self, name: String, cx: &mut Context<'_, Self>) {
+        self.selected = Some(name);
+        self.installed.clear();
+        self.available.clear();
+        self.reload_detail(cx);
+    }
+
+    /// Reload installed + available versions for the selected tool.
+    pub(crate) fn reload_detail(&self, cx: &mut Context<'_, Self>) {
+        let Some(name) = self.selected.clone() else {
+            return;
+        };
+        let svc_installed = self.service.clone();
+        let svc_available = self.service.clone();
+        let name_installed = name.clone();
+        let name_available = name;
+        cx.spawn(async move |this, cx| {
+            let installed = cx
+                .background_spawn(async move { svc_installed.installed_rows(&name_installed) })
+                .await;
+            let available = cx
+                .background_spawn(async move { svc_available.search_available(&name_available, "") })
+                .await;
+            this.update(cx, |this, cx| {
+                match installed {
+                    Ok(rows) => this.installed = rows,
+                    Err(err) => this.deferred_error(err, cx),
+                }
+                match available {
+                    Ok(rows) => this.available = rows,
+                    Err(err) => this.deferred_error(err, cx),
+                }
+                cx.notify();
+            })
+            .ok();
+        })
+        .detach();
+    }
+
+    pub(crate) fn open_add_tool(&mut self, _window: &mut Window, _cx: &mut Context<'_, Self>) {
+        // Implemented in Task 7.
+    }
 }
 
 impl Render for RootView {
@@ -102,27 +146,6 @@ impl RootView {
                 format!("scope: {} · working…", self.scope.label())
             } else {
                 format!("scope: {}", self.scope.label())
-            }))
-    }
-
-    fn render_sidebar(
-        &mut self,
-        _window: &mut Window,
-        _cx: &mut Context<'_, Self>,
-    ) -> impl IntoElement {
-        div()
-            .w(px(200.0))
-            .p_2()
-            .flex()
-            .flex_col()
-            .child(Input::new(&self.filter_input))
-            .child("TOOLS")
-            .children(self.tools.iter().map(|t| {
-                let label = match &t.current_version {
-                    Some(v) => format!("{} ({})", t.name, v),
-                    None => t.name.clone(),
-                };
-                div().py_1().child(label)
             }))
     }
 
