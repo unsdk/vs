@@ -1,8 +1,10 @@
 //! Root view: owns all UI state and the top-level window layout.
 
 use gpui::prelude::*;
-use gpui::{div, px, Context, Entity, IntoElement, ParentElement, Styled, Window};
-use gpui_component::input::{Input, InputState};
+use gpui::{div, px, Context, Entity, IntoElement, ParentElement, SharedString, Styled, Window};
+use gpui_component::input::InputState;
+use gpui_component::notification::{Notification, NotificationType};
+use gpui_component::WindowExt;
 
 use vs_core::CoreError;
 
@@ -109,6 +111,63 @@ impl RootView {
     pub(crate) fn open_add_tool(&mut self, _window: &mut Window, _cx: &mut Context<'_, Self>) {
         // Implemented in Task 7.
     }
+
+    /// Run a blocking `service` operation off the UI thread, toast the outcome,
+    /// then refresh the detail + sidebar lists. `op` returns the success message.
+    pub(crate) fn run_action<F>(&mut self, window: &mut Window, cx: &mut Context<'_, Self>, op: F)
+    where
+        F: FnOnce(AppService) -> Result<String, CoreError> + Send + 'static,
+    {
+        let service = self.service.clone();
+        self.busy += 1;
+        cx.spawn_in(window, async move |this, cx| {
+            let result = cx.background_spawn(async move { op(service) }).await;
+            this.update_in(cx, |this, window, cx| {
+                this.busy = this.busy.saturating_sub(1);
+                match result {
+                    Ok(msg) => window.push_notification(
+                        Notification::from((NotificationType::Success, SharedString::from(msg))),
+                        cx,
+                    ),
+                    Err(err) => window.push_notification(
+                        Notification::from((
+                            NotificationType::Error,
+                            SharedString::from(format!("{err}")),
+                        )),
+                        cx,
+                    ),
+                }
+                this.reload_detail(cx);
+                this.reload_tools(cx);
+                cx.notify();
+            })
+            .ok();
+        })
+        .detach();
+    }
+
+    /// Re-run the Available search using the current search-box text.
+    pub(crate) fn run_search(&self, cx: &mut Context<'_, Self>) {
+        let Some(name) = self.selected.clone() else {
+            return;
+        };
+        let query = self.search_input.read(cx).value().to_string();
+        let service = self.service.clone();
+        cx.spawn(async move |this, cx| {
+            let rows = cx
+                .background_spawn(async move { service.search_available(&name, &query) })
+                .await;
+            this.update(cx, |this, cx| {
+                match rows {
+                    Ok(rows) => this.available = rows,
+                    Err(err) => this.deferred_error(err, cx),
+                }
+                cx.notify();
+            })
+            .ok();
+        })
+        .detach();
+    }
 }
 
 impl Render for RootView {
@@ -147,27 +206,5 @@ impl RootView {
             } else {
                 format!("scope: {}", self.scope.label())
             }))
-    }
-
-    fn render_detail(
-        &mut self,
-        _window: &mut Window,
-        _cx: &mut Context<'_, Self>,
-    ) -> impl IntoElement {
-        div()
-            .flex_1()
-            .p_2()
-            .flex()
-            .flex_col()
-            .child(match &self.selected {
-                Some(name) => format!("Selected: {name}"),
-                None => "Select a tool".to_string(),
-            })
-            .child(Input::new(&self.search_input))
-            .child(format!(
-                "installed: {} · available: {}",
-                self.installed.len(),
-                self.available.len()
-            ))
     }
 }
