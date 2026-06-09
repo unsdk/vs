@@ -141,9 +141,7 @@ pub fn available_rows(found: Vec<String>, installed: &[String]) -> Vec<VersionRo
 /// an indeterminate spinner instead of a determinate bar.
 pub fn progress_percent(done: u64, total: Option<u64>) -> Option<f32> {
     match total {
-        Some(total) if total > 0 => {
-            Some((done as f32 / total as f32 * 100.0).clamp(0.0, 100.0))
-        }
+        Some(total) if total > 0 => Some((done as f32 / total as f32 * 100.0).clamp(0.0, 100.0)),
         _ => None,
     }
 }

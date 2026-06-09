@@ -108,7 +108,12 @@ impl Installer {
         let main = self.materialize_artifact(&plan.main, &staged_install, true, progress)?;
         let mut additions = Vec::new();
         for artifact in &plan.additions {
-            additions.push(self.materialize_artifact(artifact, &staged_install, false, progress)?);
+            additions.push(self.materialize_artifact(
+                artifact,
+                &staged_install,
+                false,
+                progress,
+            )?);
         }
         self.validate_staged_install(&staged_install)?;
 

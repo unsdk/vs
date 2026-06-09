@@ -380,14 +380,15 @@ impl Render for RootView {
             .child(self.render_title_bar(window, cx))
             .when_some(self.last_error.clone(), |el, msg| {
                 el.child(
-                    div().px_3().py_1().child(
-                        Alert::error("vs-error", msg).on_close(cx.listener(
+                    div()
+                        .px_3()
+                        .py_1()
+                        .child(Alert::error("vs-error", msg).on_close(cx.listener(
                             |this, _ev, _window, cx| {
                                 this.last_error = None;
                                 cx.notify();
                             },
-                        )),
-                    ),
+                        ))),
                 )
             })
             .child(body)

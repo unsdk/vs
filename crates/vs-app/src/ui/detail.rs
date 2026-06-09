@@ -39,7 +39,10 @@ impl RootView {
         }
         let mut available_rows: Vec<AnyElement> = Vec::with_capacity(available.len());
         for (ix, row) in available.into_iter().enumerate() {
-            available_rows.push(self.render_available_row(ix, &name, row, cx).into_any_element());
+            available_rows.push(
+                self.render_available_row(ix, &name, row, cx)
+                    .into_any_element(),
+            );
         }
         if available_rows.is_empty() {
             available_rows.push(
@@ -125,11 +128,9 @@ impl RootView {
                             .flex()
                             .gap_1()
                             .child(div().flex_1().child(Input::new(&self.search_input)))
-                            .child(
-                                Button::new("search").label("Search").on_click(
-                                    cx.listener(|this, _ev, _window, cx| this.run_search(cx)),
-                                ),
-                            ),
+                            .child(Button::new("search").label("Search").on_click(
+                                cx.listener(|this, _ev, _window, cx| this.run_search(cx)),
+                            )),
                     )
                     .children(available_rows),
             )
@@ -182,9 +183,8 @@ impl RootView {
                                 let (n, v) = (use_name.clone(), use_version.clone());
                                 let key = format!("use:{n}:{v}");
                                 this.run_action(key, window, cx, move |svc| {
-                                    svc.use_version(&n, &v, scope).map(|iv| {
-                                        format!("Now using {}@{}", iv.plugin, iv.version)
-                                    })
+                                    svc.use_version(&n, &v, scope)
+                                        .map(|iv| format!("Now using {}@{}", iv.plugin, iv.version))
                                 });
                             })),
                     )
@@ -196,8 +196,7 @@ impl RootView {
                             .loading(uninstall_loading)
                             .disabled(uninstall_loading)
                             .on_click(cx.listener(move |this, _ev, window, cx| {
-                                let (n, v) =
-                                    (uninstall_name.clone(), uninstall_version.clone());
+                                let (n, v) = (uninstall_name.clone(), uninstall_version.clone());
                                 let key = format!("uninstall:{n}:{v}");
                                 this.run_action(key, window, cx, move |svc| {
                                     svc.uninstall(&n, &v).map(|res| {
@@ -229,8 +228,11 @@ impl RootView {
         let already = row.installed;
         let display_version = row.version.clone();
         let install_version = row.version;
-        let progress_key =
-            format!("install:{name}:{version}", name = name, version = install_version);
+        let progress_key = format!(
+            "install:{name}:{version}",
+            name = name,
+            version = install_version
+        );
         let install_loading = self.pending.contains(&progress_key);
         let row_progress = self
             .progress
