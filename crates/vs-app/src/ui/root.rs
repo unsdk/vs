@@ -8,6 +8,7 @@ use gpui_component::WindowExt;
 use gpui_component::alert::Alert;
 use gpui_component::input::InputState;
 use gpui_component::notification::{Notification, NotificationType};
+use gpui_component::resizable::{ResizableState, h_resizable, resizable_panel};
 
 use vs_core::CoreError;
 
@@ -42,6 +43,10 @@ pub struct RootView {
     pub(crate) add_source_input: Entity<InputState>,
     pub(crate) add_alias_input: Entity<InputState>,
     pub(crate) add_backend: crate::model::BackendChoice,
+    /// Persisted drag state for the sidebar/detail resizable split.
+    pub(crate) resizable_state: Entity<ResizableState>,
+    /// Whether the sidebar is collapsed to a thin strip.
+    pub(crate) sidebar_collapsed: bool,
 }
 
 impl RootView {
@@ -54,6 +59,7 @@ impl RootView {
             cx.new(|cx| InputState::new(window, cx).placeholder("git URL or local path"));
         let add_alias_input =
             cx.new(|cx| InputState::new(window, cx).placeholder("alias (optional)"));
+        let resizable_state = cx.new(|_| ResizableState::default());
         let view = Self {
             service,
             tools: Vec::new(),
@@ -72,6 +78,8 @@ impl RootView {
             add_source_input,
             add_alias_input,
             add_backend: crate::model::BackendChoice::Lua,
+            resizable_state,
+            sidebar_collapsed: false,
         };
         view.reload_tools(cx);
         view
@@ -255,12 +263,23 @@ impl Render for RootView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<'_, Self>) -> impl IntoElement {
         let body = if self.show_add {
             self.render_add_panel(window, cx).into_any_element()
-        } else {
+        } else if self.sidebar_collapsed {
             div()
                 .flex()
                 .flex_1()
-                .child(self.render_sidebar(window, cx))
+                .child(self.render_sidebar_collapsed(cx))
                 .child(self.render_detail(window, cx))
+                .into_any_element()
+        } else {
+            h_resizable("vs-main")
+                .with_state(&self.resizable_state)
+                .child(
+                    resizable_panel()
+                        .size(px(220.0))
+                        .size_range(px(160.0)..px(420.0))
+                        .child(self.render_sidebar(window, cx)),
+                )
+                .child(resizable_panel().child(self.render_detail(window, cx)))
                 .into_any_element()
         };
         div()
@@ -285,6 +304,25 @@ impl Render for RootView {
 }
 
 impl RootView {
+    /// Thin strip shown when the sidebar is collapsed; expands on click.
+    fn render_sidebar_collapsed(&mut self, cx: &mut Context<'_, Self>) -> impl IntoElement {
+        use gpui_component::button::Button;
+        div()
+            .w(px(36.0))
+            .flex()
+            .flex_col()
+            .items_center()
+            .p_1()
+            .child(
+                Button::new("expand-sidebar")
+                    .label("›")
+                    .on_click(cx.listener(|this, _ev, _window, cx| {
+                        this.sidebar_collapsed = false;
+                        cx.notify();
+                    })),
+            )
+    }
+
     /// Title bar: app name, registry refresh, and the scope selector.
     fn render_title_bar(
         &mut self,

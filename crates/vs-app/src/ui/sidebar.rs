@@ -28,6 +28,14 @@ impl RootView {
                 div()
                     .flex()
                     .gap_1()
+                    .child(
+                        Button::new("collapse-sidebar")
+                            .label("‹")
+                            .on_click(cx.listener(|this, _ev, _window, cx| {
+                                this.sidebar_collapsed = true;
+                                cx.notify();
+                            })),
+                    )
                     .child(div().flex_1().child(Input::new(&self.filter_input)))
                     .child(
                         Button::new("add-tool")
