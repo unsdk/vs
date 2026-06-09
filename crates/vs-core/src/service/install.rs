@@ -26,7 +26,7 @@ impl App {
             })?;
 
         let plan = plugin.install_plan(&selected_version)?;
-        let runtime = self.installer.install(&plan)?;
+        let runtime = self.installer.install(&plan, None)?;
 
         // Run PostInstall inside a logical transaction: if it fails, roll back
         // the freshly committed install directory so we never leave a half-

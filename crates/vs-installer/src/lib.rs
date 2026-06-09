@@ -11,6 +11,12 @@ use thiserror::Error;
 pub use install::Installer;
 pub use receipt::InstallReceipt;
 
+/// Reports download progress as `(bytes_downloaded_so_far, total_bytes_if_known)`.
+///
+/// Invoked synchronously on whatever thread runs the download. Optional — when
+/// `None` the installer falls back to its console progress bar.
+pub type ProgressFn<'a> = dyn Fn(u64, Option<u64>) + 'a;
+
 /// Runtime installer configuration resolved by the application layer.
 #[derive(Debug, Clone, Default)]
 pub struct InstallerOptions {
@@ -80,7 +86,7 @@ mod tests {
             legacy_filenames: Vec::new(),
         };
 
-        let error = match installer.install(&plan) {
+        let error = match installer.install(&plan, None) {
             Ok(_) => {
                 return Err(Box::new(std::io::Error::other(
                     "install unexpectedly succeeded",
@@ -104,7 +110,7 @@ mod tests {
 
         let installer = Installer::new(temp_dir.path().join("home"));
         let plan = install_plan_from_archive(&archive);
-        let installed = installer.install(&plan)?;
+        let installed = installer.install(&plan, None)?;
 
         assert!(installed.main.path.join("bin/node").exists());
         Ok(())
@@ -121,7 +127,7 @@ mod tests {
 
         let installer = Installer::new(temp_dir.path().join("home"));
         let plan = install_plan_from_archive(&archive);
-        let installed = installer.install(&plan)?;
+        let installed = installer.install(&plan, None)?;
 
         assert!(installed.main.path.join("bin/node").exists());
         assert!(!installed.main.path.join("package").exists());
