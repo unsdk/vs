@@ -27,6 +27,7 @@ path = "src/main.rs"
 anyhow.workspace = true
 gpui.workspace = true
 gpui-component.workspace = true
+smol.workspace = true
 vs-core = { workspace = true, default-features = false }
 vs-plugin-api.workspace = true
 

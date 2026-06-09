@@ -22,6 +22,14 @@ pub(crate) enum AddTab {
     Source,
 }
 
+/// Live state for an in-flight install download.
+#[derive(Clone, Debug)]
+pub(crate) struct InstallProgress {
+    pub(crate) key: String,
+    pub(crate) done: u64,
+    pub(crate) total: Option<u64>,
+}
+
 /// Single source of truth for the GUI.
 pub struct RootView {
     pub(crate) service: AppService,
@@ -47,6 +55,8 @@ pub struct RootView {
     pub(crate) resizable_state: Entity<ResizableState>,
     /// Whether the sidebar is collapsed to a thin strip.
     pub(crate) sidebar_collapsed: bool,
+    /// Live state for the currently in-flight install download, if any.
+    pub(crate) progress: Option<InstallProgress>,
 }
 
 impl RootView {
@@ -80,6 +90,7 @@ impl RootView {
             add_backend: crate::model::BackendChoice::Lua,
             resizable_state,
             sidebar_collapsed: false,
+            progress: None,
         };
         view.reload_tools(cx);
         view
@@ -205,6 +216,87 @@ impl RootView {
                 match result {
                     Ok(msg) => window.push_notification(
                         Notification::from((NotificationType::Success, SharedString::from(msg))),
+                        cx,
+                    ),
+                    Err(err) => {
+                        let msg = format!("{err}");
+                        this.set_error(msg.clone());
+                        window.push_notification(
+                            Notification::from((NotificationType::Error, SharedString::from(msg))),
+                            cx,
+                        );
+                    }
+                }
+                this.reload_detail(cx);
+                this.reload_tools(cx);
+                cx.notify();
+            })
+            .ok();
+        })
+        .detach();
+    }
+
+    /// Install a version, streaming download progress into `self.progress`.
+    pub(crate) fn run_install(
+        &mut self,
+        name: String,
+        version: String,
+        window: &mut Window,
+        cx: &mut Context<'_, Self>,
+    ) {
+        let key = format!("install:{name}:{version}");
+        self.pending.insert(key.clone());
+        self.progress = Some(InstallProgress {
+            key: key.clone(),
+            done: 0,
+            total: None,
+        });
+        let (tx, rx) = smol::channel::unbounded::<(u64, Option<u64>)>();
+
+        // Foreground drain: apply progress events to state until the channel closes.
+        cx.spawn(async move |this, cx| {
+            while let Ok((done, total)) = rx.recv().await {
+                if this
+                    .update(cx, |this, cx| {
+                        if let Some(p) = this.progress.as_mut() {
+                            p.done = done;
+                            p.total = total;
+                        }
+                        cx.notify();
+                    })
+                    .is_err()
+                {
+                    break;
+                }
+            }
+        })
+        .detach();
+
+        // Background install: report bytes via the channel, then finalize.
+        let service = self.service.clone();
+        let install_name = name;
+        let install_version = version;
+        cx.spawn_in(window, async move |this, cx| {
+            let result = cx
+                .background_spawn(async move {
+                    service.install_with_progress(
+                        &install_name,
+                        &install_version,
+                        &|done, total| {
+                            let _ = tx.try_send((done, total));
+                        },
+                    )
+                })
+                .await;
+            this.update_in(cx, |this, window, cx| {
+                this.pending.remove(&key);
+                this.progress = None;
+                match result {
+                    Ok(iv) => window.push_notification(
+                        Notification::from((
+                            NotificationType::Success,
+                            SharedString::from(format!("Installed {}@{}", iv.plugin, iv.version)),
+                        )),
                         cx,
                     ),
                     Err(err) => {

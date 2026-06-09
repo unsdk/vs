@@ -6834,6 +6834,7 @@ dependencies = [
  "anyhow",
  "gpui",
  "gpui-component",
+ "smol",
  "vs-core",
  "vs-plugin-api",
 ]

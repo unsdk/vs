@@ -3,11 +3,14 @@
 use gpui::prelude::*;
 use gpui::{Context, IntoElement, ParentElement, Styled, Window, div};
 use gpui_component::Disableable;
+use gpui_component::Sizable;
 use gpui_component::button::Button;
 use gpui_component::input::Input;
+use gpui_component::progress::Progress;
 use gpui_component::scroll::ScrollableElement;
+use gpui_component::spinner::Spinner;
 
-use crate::model::{ScopeChoice, VersionRow};
+use crate::model::{ScopeChoice, VersionRow, progress_percent};
 use crate::ui::RootView;
 
 impl RootView {
@@ -183,25 +186,41 @@ impl RootView {
         let already = row.installed;
         let display_version = row.version.clone();
         let install_version = row.version;
+        let progress_key = format!("install:{name}:{version}", name = name, version = install_version);
+        let row_progress = self
+            .progress
+            .as_ref()
+            .filter(|p| p.key == progress_key)
+            .map(|p| progress_percent(p.done, p.total));
         div()
-            .id(("available", ix))
             .flex()
-            .items_center()
-            .justify_between()
-            .py_1()
-            .child(div().child(display_version))
+            .flex_col()
+            .gap_1()
             .child(
-                Button::new(("install", ix))
-                    .label(if already { "Installed" } else { "Install" })
-                    .disabled(already)
-                    .on_click(cx.listener(move |this, _ev, window, cx| {
-                        let (n, v) = (install_name.clone(), install_version.clone());
-                        let key = format!("install:{n}:{v}");
-                        this.run_action(key, window, cx, move |svc| {
-                            svc.install(&n, &v)
-                                .map(|iv| format!("Installed {}@{}", iv.plugin, iv.version))
-                        });
-                    })),
+                div()
+                    .id(("available", ix))
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .py_1()
+                    .child(div().child(display_version))
+                    .child(
+                        Button::new(("install", ix))
+                            .label(if already { "Installed" } else { "Install" })
+                            .disabled(already)
+                            .on_click(cx.listener(move |this, _ev, window, cx| {
+                                this.run_install(
+                                    install_name.clone(),
+                                    install_version.clone(),
+                                    window,
+                                    cx,
+                                );
+                            })),
+                    ),
             )
+            .when_some(row_progress, |el, pct| match pct {
+                Some(value) => el.child(div().w_full().child(Progress::new().value(value))),
+                None => el.child(Spinner::new().with_size(gpui_component::Size::Small)),
+            })
     }
 }
