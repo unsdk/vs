@@ -4,6 +4,11 @@ mod model;
 mod service;
 mod ui;
 
+pub use model::{
+    AddSource, BackendChoice, ScopeChoice, ToolRow, VersionRow,
+    available_rows, filter_tool_rows, installed_rows, merge_tool_rows,
+};
+
 use anyhow::Result;
 
 /// Launch the GUI application. Wired up fully in later tasks.

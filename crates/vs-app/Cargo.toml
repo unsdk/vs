@@ -28,6 +28,7 @@ anyhow.workspace = true
 gpui.workspace = true
 gpui-component.workspace = true
 vs-core = { workspace = true, default-features = false }
+vs-plugin-api.workspace = true
 
 [lints]
 workspace = true
