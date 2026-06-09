@@ -38,7 +38,7 @@ pub fn install_single_spec(
     let Some(version) = version else {
         return Ok(None);
     };
-    let installed = app.install_plugin_version(&plugin, Some(&version))?;
+    let installed = app.install_plugin_version(&plugin, Some(&version), None)?;
     Ok(Some(installed))
 }
 
@@ -83,7 +83,7 @@ pub fn install_all_configured(app: &App, yes: bool) -> Result<()> {
             failed.push(format!("{plugin}@{version}"));
             continue;
         }
-        match app.install_plugin_version(&plugin, Some(&version)) {
+        match app.install_plugin_version(&plugin, Some(&version), None) {
             Ok(installed) => {
                 print_status(&format!(
                     "Install {}@{} success! ",

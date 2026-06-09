@@ -13,6 +13,7 @@ pub use models::{
     CurrentTool, InstalledVersion, MigrateSummary, PluginInfo, SelfUpgradeSummary, UninstallResult,
     UseScope, VersionInfo,
 };
+pub use vs_installer::ProgressFn;
 
 #[cfg(test)]
 mod tests {
@@ -57,7 +58,7 @@ mod tests {
             Some(PluginBackendKind::Lua),
             None,
         )?;
-        app.install_plugin_version("nodejs", Some("20.11.1"))?;
+        app.install_plugin_version("nodejs", Some("20.11.1"), None)?;
 
         app.use_tool("nodejs", "20.11.1", UseScope::Project, false)?;
 
@@ -270,7 +271,7 @@ mod tests {
             Some(PluginBackendKind::Lua),
             None,
         )?;
-        let installed = app.install_plugin_version("nodejs", Some("20.11.1"))?;
+        let installed = app.install_plugin_version("nodejs", Some("20.11.1"), None)?;
 
         assert!(installed.install_dir.starts_with(&storage_root));
         assert!(!installed.install_dir.starts_with(default_runtime_root));
@@ -348,8 +349,8 @@ mod tests {
             Some(PluginBackendKind::Lua),
             None,
         )?;
-        app.install_plugin_version("nodejs", Some("20.9.0"))?;
-        app.install_plugin_version("nodejs", Some("20.11.1"))?;
+        app.install_plugin_version("nodejs", Some("20.9.0"), None)?;
+        app.install_plugin_version("nodejs", Some("20.11.1"), None)?;
 
         assert_eq!(
             app.project_tool_version_for_use("nodejs")?,

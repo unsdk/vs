@@ -365,7 +365,7 @@ mod tests {
             Some(PluginBackendKind::Lua),
             None,
         )?;
-        app.install_plugin_version("nodejs", Some("20.11.1"))?;
+        app.install_plugin_version("nodejs", Some("20.11.1"), None)?;
 
         let installed = app.use_tool("nodejs", "lts", UseScope::Project, false)?;
 

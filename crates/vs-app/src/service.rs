@@ -72,7 +72,7 @@ impl AppService {
 
     /// Install a specific version of a tool.
     pub fn install(&self, name: &str, version: &str) -> Result<InstalledVersion, CoreError> {
-        self.core.install_plugin_version(name, Some(version))
+        self.core.install_plugin_version(name, Some(version), None)
     }
 
     /// Switch the active version for a tool in the given scope.

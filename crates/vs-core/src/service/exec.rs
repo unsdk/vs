@@ -59,7 +59,7 @@ impl App {
             if let Some(runtime) = self.load_installed_runtime(plugin_name, version)? {
                 return Ok(runtime);
             }
-            let installed = self.install_plugin_version(plugin_name, Some(version))?;
+            let installed = self.install_plugin_version(plugin_name, Some(version), None)?;
             installed.version
         } else {
             self.current_tool(plugin_name)?
