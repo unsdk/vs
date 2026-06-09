@@ -1,15 +1,42 @@
 //! Add-tool panel: browse the registry or add a plugin from a source.
 
 use gpui::prelude::*;
-use gpui::{Context, IntoElement, ParentElement, Styled, Window, div};
+use gpui::{Context, IntoElement, ParentElement, Styled, Window, div, px};
+use gpui_component::ActiveTheme;
 use gpui_component::button::Button;
 use gpui_component::input::Input;
+use gpui_component::scroll::ScrollableElement;
 
 use crate::model::{AddSource, BackendChoice};
 use crate::ui::RootView;
 use crate::ui::root::AddTab;
 
 impl RootView {
+    pub(crate) fn render_add_modal(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<'_, Self>,
+    ) -> impl IntoElement {
+        div()
+            .absolute()
+            .size_full()
+            .flex()
+            .items_center()
+            .justify_center()
+            .bg(gpui::rgba(0x0000_0088))
+            .occlude()
+            .child(
+                div()
+                    .w(px(560.0))
+                    .max_h(px(520.0))
+                    .bg(cx.theme().background)
+                    .rounded(px(8.0))
+                    .shadow_lg()
+                    .p_4()
+                    .child(self.render_add_panel(window, cx)),
+            )
+    }
+
     pub(crate) fn render_add_panel(
         &mut self,
         _window: &mut Window,
@@ -17,7 +44,6 @@ impl RootView {
     ) -> impl IntoElement {
         let tab = self.add_tab;
         div()
-            .flex_1()
             .flex()
             .flex_col()
             .gap_2()
@@ -103,7 +129,16 @@ impl RootView {
             .flex_col()
             .gap_1()
             .child(Input::new(&self.add_filter_input))
-            .children(rows)
+            .child(
+                div()
+                    .id("add-registry-scroll")
+                    .max_h(px(320.0))
+                    .overflow_y_scrollbar()
+                    .flex()
+                    .flex_col()
+                    .gap_1()
+                    .children(rows),
+            )
     }
 
     fn render_add_source(&mut self, cx: &mut Context<'_, Self>) -> impl IntoElement + use<> {

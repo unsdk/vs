@@ -353,9 +353,7 @@ impl RootView {
 
 impl Render for RootView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<'_, Self>) -> impl IntoElement {
-        let body = if self.show_add {
-            self.render_add_panel(window, cx).into_any_element()
-        } else if self.sidebar_collapsed {
+        let body = if self.sidebar_collapsed {
             div()
                 .flex()
                 .flex_1()
@@ -378,6 +376,7 @@ impl Render for RootView {
             .size_full()
             .flex()
             .flex_col()
+            .relative()
             .child(self.render_title_bar(window, cx))
             .when_some(self.last_error.clone(), |el, msg| {
                 el.child(
@@ -392,6 +391,9 @@ impl Render for RootView {
                 )
             })
             .child(body)
+            .when(self.show_add, |el| {
+                el.child(self.render_add_modal(window, cx))
+            })
     }
 }
 
