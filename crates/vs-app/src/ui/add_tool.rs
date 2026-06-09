@@ -89,7 +89,8 @@ impl RootView {
                             .on_click(cx.listener(move |this, _ev, window, cx| {
                                 let n = add_name.clone();
                                 this.show_add = false;
-                                this.run_action(window, cx, move |svc| {
+                                let key = format!("add:{n}");
+                                this.run_action(key, window, cx, move |svc| {
                                     svc.add(AddSource::Registry { name: n.clone() })
                                         .map(|()| format!("Added {n}"))
                                 });
@@ -151,7 +152,8 @@ impl RootView {
                         }
                         this.show_add = false;
                         let backend = this.add_backend;
-                        this.run_action(window, cx, move |svc| {
+                        let key = format!("add-source:{source}");
+                        this.run_action(key, window, cx, move |svc| {
                             svc.add(AddSource::Source {
                                 source: source.clone(),
                                 alias,

@@ -58,7 +58,8 @@ impl RootView {
                                     .label("Update plugin")
                                     .on_click(cx.listener(move |this, _ev, window, cx| {
                                         let n = update_name.clone();
-                                        this.run_action(window, cx, move |svc| {
+                                        let key = format!("update:{n}");
+                                        this.run_action(key, window, cx, move |svc| {
                                             svc.update_plugin(&n).map(|()| format!("Updated {n}"))
                                         });
                                     })),
@@ -69,7 +70,8 @@ impl RootView {
                                     .on_click(cx.listener(move |this, _ev, window, cx| {
                                         let n = remove_name.clone();
                                         this.selected = None;
-                                        this.run_action(window, cx, move |svc| {
+                                        let key = format!("remove:{n}");
+                                        this.run_action(key, window, cx, move |svc| {
                                             svc.remove_plugin(&n).map(|removed| {
                                                 if removed {
                                                     format!("Removed {n}")
@@ -130,7 +132,8 @@ impl RootView {
                     .child(Button::new(("use", ix)).label("Use").on_click(cx.listener(
                         move |this, _ev, window, cx| {
                             let (n, v) = (use_name.clone(), use_version.clone());
-                            this.run_action(window, cx, move |svc| {
+                            let key = format!("use:{n}:{v}");
+                            this.run_action(key, window, cx, move |svc| {
                                 svc.use_version(&n, &v, scope)
                                     .map(|iv| format!("Now using {}@{}", iv.plugin, iv.version))
                             });
@@ -139,7 +142,8 @@ impl RootView {
                     .child(Button::new(("uninstall", ix)).label("Uninstall").on_click(
                         cx.listener(move |this, _ev, window, cx| {
                             let (n, v) = (uninstall_name.clone(), uninstall_version.clone());
-                            this.run_action(window, cx, move |svc| {
+                            let key = format!("uninstall:{n}:{v}");
+                            this.run_action(key, window, cx, move |svc| {
                                 svc.uninstall(&n, &v).map(|res| {
                                     if res.removed {
                                         match res.auto_switched {
@@ -182,7 +186,8 @@ impl RootView {
                     .disabled(already)
                     .on_click(cx.listener(move |this, _ev, window, cx| {
                         let (n, v) = (install_name.clone(), install_version.clone());
-                        this.run_action(window, cx, move |svc| {
+                        let key = format!("install:{n}:{v}");
+                        this.run_action(key, window, cx, move |svc| {
                             svc.install(&n, &v)
                                 .map(|iv| format!("Installed {}@{}", iv.plugin, iv.version))
                         });

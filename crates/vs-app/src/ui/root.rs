@@ -1,8 +1,11 @@
 //! Root view: owns all UI state and the top-level window layout.
 
+use std::collections::HashSet;
+
 use gpui::prelude::*;
 use gpui::{Context, Entity, IntoElement, ParentElement, SharedString, Styled, Window, div, px};
 use gpui_component::WindowExt;
+use gpui_component::alert::Alert;
 use gpui_component::input::InputState;
 use gpui_component::notification::{Notification, NotificationType};
 
@@ -28,8 +31,10 @@ pub struct RootView {
     pub(crate) scope: ScopeChoice,
     pub(crate) filter_input: Entity<InputState>,
     pub(crate) search_input: Entity<InputState>,
-    /// Number of in-flight background operations; used to show a busy hint.
-    pub(crate) busy: u32,
+    /// Action keys for in-flight operations (e.g. "install:nodejs:21.6.0").
+    pub(crate) pending: HashSet<String>,
+    /// Last error message, shown as a dismissible inline banner. None = hidden.
+    pub(crate) last_error: Option<String>,
     pub(crate) show_add: bool,
     pub(crate) add_tab: AddTab,
     pub(crate) add_registry: Vec<String>,
@@ -58,7 +63,8 @@ impl RootView {
             scope: ScopeChoice::Project,
             filter_input,
             search_input,
-            busy: 0,
+            pending: HashSet::new(),
+            last_error: None,
             show_add: false,
             add_tab: AddTab::Registry,
             add_registry: Vec::new(),
@@ -90,10 +96,15 @@ impl RootView {
         .detach();
     }
 
-    /// Stash an error to surface as a toast. (`report_error` needs a `Window`;
-    /// when we only have `Context`, log to stderr as a fallback for v1.)
-    pub(crate) fn deferred_error(&self, err: CoreError, _cx: &mut Context<'_, Self>) {
-        eprintln!("vs-app: {err}");
+    /// Record an error message: log it and surface it as an inline banner.
+    pub(crate) fn set_error(&mut self, message: String) {
+        eprintln!("vs-app: {message}");
+        self.last_error = Some(message);
+    }
+
+    /// Surface a `CoreError` from a load path as an inline banner.
+    pub(crate) fn deferred_error(&mut self, err: CoreError, _cx: &mut Context<'_, Self>) {
+        self.set_error(format!("{err}"));
     }
 
     /// Select a tool and load its versions.
@@ -165,30 +176,37 @@ impl RootView {
         .detach();
     }
 
-    /// Run a blocking `service` operation off the UI thread, toast the outcome,
-    /// then refresh the detail + sidebar lists. `op` returns the success message.
-    pub(crate) fn run_action<F>(&mut self, window: &mut Window, cx: &mut Context<'_, Self>, op: F)
-    where
+    /// Run a blocking `service` operation off the UI thread under action `key`
+    /// (so its button can show a loading state), toast the outcome, surface any
+    /// error inline, then refresh the detail + sidebar lists.
+    pub(crate) fn run_action<F>(
+        &mut self,
+        key: String,
+        window: &mut Window,
+        cx: &mut Context<'_, Self>,
+        op: F,
+    ) where
         F: FnOnce(AppService) -> Result<String, CoreError> + Send + 'static,
     {
         let service = self.service.clone();
-        self.busy += 1;
+        self.pending.insert(key.clone());
         cx.spawn_in(window, async move |this, cx| {
             let result = cx.background_spawn(async move { op(service) }).await;
             this.update_in(cx, |this, window, cx| {
-                this.busy = this.busy.saturating_sub(1);
+                this.pending.remove(&key);
                 match result {
                     Ok(msg) => window.push_notification(
                         Notification::from((NotificationType::Success, SharedString::from(msg))),
                         cx,
                     ),
-                    Err(err) => window.push_notification(
-                        Notification::from((
-                            NotificationType::Error,
-                            SharedString::from(format!("{err}")),
-                        )),
-                        cx,
-                    ),
+                    Err(err) => {
+                        let msg = format!("{err}");
+                        this.set_error(msg.clone());
+                        window.push_notification(
+                            Notification::from((NotificationType::Error, SharedString::from(msg))),
+                            cx,
+                        );
+                    }
                 }
                 this.reload_detail(cx);
                 this.reload_tools(cx);
@@ -250,6 +268,18 @@ impl Render for RootView {
             .flex()
             .flex_col()
             .child(self.render_title_bar(window, cx))
+            .when_some(self.last_error.clone(), |el, msg| {
+                el.child(
+                    div().px_3().py_1().child(
+                        Alert::error("vs-error", msg).on_close(cx.listener(
+                            |this, _ev, _window, cx| {
+                                this.last_error = None;
+                                cx.notify();
+                            },
+                        )),
+                    ),
+                )
+            })
             .child(body)
     }
 }
@@ -275,12 +305,14 @@ impl RootView {
                     .flex()
                     .gap_1()
                     .items_center()
-                    .when(self.busy > 0, |el| el.child(div().child("working…")))
+                    .when(!self.pending.is_empty(), |el| {
+                        el.child(div().child("working…"))
+                    })
                     .child(
                         Button::new("refresh-registry")
                             .label("Refresh registry")
                             .on_click(cx.listener(|this, _ev, window, cx| {
-                                this.run_action(window, cx, |svc| {
+                                this.run_action("refresh".to_string(), window, cx, |svc| {
                                     svc.refresh_registry()
                                         .map(|n| format!("Registry refreshed: {n} plugins"))
                                 });
