@@ -6,7 +6,7 @@ mod ui;
 
 pub use model::{
     AddSource, BackendChoice, ScopeChoice, ToolRow, VersionRow, available_rows, filter_tool_rows,
-    installed_rows, merge_tool_rows,
+    installed_rows, merge_tool_rows, progress_percent,
 };
 pub use service::AppService;
 

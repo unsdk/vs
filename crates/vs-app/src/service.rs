@@ -75,6 +75,18 @@ impl AppService {
         self.core.install_plugin_version(name, Some(version), None)
     }
 
+    /// Install a specific version, reporting download progress via `on_progress`
+    /// as `(downloaded_bytes, total_bytes_if_known)`.
+    pub fn install_with_progress(
+        &self,
+        name: &str,
+        version: &str,
+        on_progress: &vs_core::ProgressFn<'_>,
+    ) -> Result<InstalledVersion, CoreError> {
+        self.core
+            .install_plugin_version(name, Some(version), Some(on_progress))
+    }
+
     /// Switch the active version for a tool in the given scope.
     pub fn use_version(
         &self,

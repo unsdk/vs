@@ -135,6 +135,19 @@ pub fn available_rows(found: Vec<String>, installed: &[String]) -> Vec<VersionRo
         .collect()
 }
 
+/// Compute a `0.0..=100.0` percentage from downloaded/total bytes.
+///
+/// Returns `None` when the total is unknown or zero, signalling the UI to show
+/// an indeterminate spinner instead of a determinate bar.
+pub fn progress_percent(done: u64, total: Option<u64>) -> Option<f32> {
+    match total {
+        Some(total) if total > 0 => {
+            Some((done as f32 / total as f32 * 100.0).clamp(0.0, 100.0))
+        }
+        _ => None,
+    }
+}
+
 /// Case-insensitive substring filter for the sidebar tool list.
 pub fn filter_tool_rows(rows: &[ToolRow], query: &str) -> Vec<ToolRow> {
     if query.is_empty() {
@@ -252,5 +265,16 @@ mod tests {
         assert_eq!(filtered[0].name, "python");
         // Empty query returns everything.
         assert_eq!(filter_tool_rows(&rows, "").len(), 2);
+    }
+
+    #[test]
+    fn progress_percent_computes_clamped_ratio_or_none() {
+        assert_eq!(progress_percent(50, Some(200)), Some(25.0));
+        assert_eq!(progress_percent(200, Some(200)), Some(100.0));
+        // Over-report clamps to 100.
+        assert_eq!(progress_percent(300, Some(200)), Some(100.0));
+        // Unknown or zero total → None (caller shows a spinner).
+        assert_eq!(progress_percent(10, None), None);
+        assert_eq!(progress_percent(10, Some(0)), None);
     }
 }
