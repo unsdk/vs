@@ -70,11 +70,6 @@ impl AppService {
         Ok(available_rows(found, &installed))
     }
 
-    /// Install a specific version of a tool.
-    pub fn install(&self, name: &str, version: &str) -> Result<InstalledVersion, CoreError> {
-        self.core.install_plugin_version(name, Some(version), None)
-    }
-
     /// Install a specific version, reporting download progress via `on_progress`
     /// as `(downloaded_bytes, total_bytes_if_known)`.
     pub fn install_with_progress(
