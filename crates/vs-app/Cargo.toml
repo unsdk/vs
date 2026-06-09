@@ -1,0 +1,33 @@
+[package]
+name = "vs-app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Cross-platform desktop GUI for the vs runtime version manager."
+readme = "README.md"
+
+[features]
+default = ["full"]
+full = ["lua", "wasi"]
+lua = ["vs-core/lua"]
+wasi = ["vs-core/wasi"]
+
+[lib]
+name = "vs_app"
+path = "src/lib.rs"
+
+[[bin]]
+name = "vs-app"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+gpui.workspace = true
+gpui-component.workspace = true
+vs-core = { workspace = true, default-features = false }
+
+[lints]
+workspace = true
