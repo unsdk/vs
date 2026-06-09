@@ -218,6 +218,16 @@ impl RootView {
         })
         .detach();
     }
+
+    /// Cycle Project → Global → Session → Project.
+    pub(crate) fn next_scope(&mut self, cx: &mut Context<'_, Self>) {
+        self.scope = match self.scope {
+            ScopeChoice::Project => ScopeChoice::Global,
+            ScopeChoice::Global => ScopeChoice::Session,
+            ScopeChoice::Session => ScopeChoice::Project,
+        };
+        cx.notify();
+    }
 }
 
 impl Render for RootView {
@@ -246,8 +256,10 @@ impl RootView {
     fn render_title_bar(
         &mut self,
         _window: &mut Window,
-        _cx: &mut Context<'_, Self>,
+        cx: &mut Context<'_, Self>,
     ) -> impl IntoElement {
+        use gpui_component::button::Button;
+        let scope_label = format!("scope: {}", self.scope.label());
         div()
             .h(px(40.0))
             .px_3()
@@ -255,10 +267,23 @@ impl RootView {
             .items_center()
             .justify_between()
             .child(div().child("vs"))
-            .child(div().child(if self.busy > 0 {
-                format!("scope: {} · working…", self.scope.label())
-            } else {
-                format!("scope: {}", self.scope.label())
-            }))
+            .child(
+                div()
+                    .flex()
+                    .gap_1()
+                    .items_center()
+                    .when(self.busy > 0, |el| el.child(div().child("working…")))
+                    .child(Button::new("refresh-registry").label("Refresh registry").on_click(
+                        cx.listener(|this, _ev, window, cx| {
+                            this.run_action(window, cx, |svc| {
+                                svc.refresh_registry()
+                                    .map(|n| format!("Registry refreshed: {n} plugins"))
+                            });
+                        }),
+                    ))
+                    .child(Button::new("scope").label(scope_label).on_click(
+                        cx.listener(|this, _ev, _window, cx| this.next_scope(cx)),
+                    )),
+            )
     }
 }

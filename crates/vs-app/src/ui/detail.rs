@@ -41,7 +41,43 @@ impl RootView {
             .flex_col()
             .gap_2()
             .p_4()
-            .child(div().text_lg().child(name.clone()))
+            .child({
+                let update_name = name.clone();
+                let remove_name = name.clone();
+                div()
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .child(div().text_lg().child(name.clone()))
+                    .child(
+                        div()
+                            .flex()
+                            .gap_1()
+                            .child(Button::new("update-plugin").label("Update plugin").on_click(
+                                cx.listener(move |this, _ev, window, cx| {
+                                    let n = update_name.clone();
+                                    this.run_action(window, cx, move |svc| {
+                                        svc.update_plugin(&n).map(|()| format!("Updated {n}"))
+                                    });
+                                }),
+                            ))
+                            .child(Button::new("remove-plugin").label("Remove plugin").on_click(
+                                cx.listener(move |this, _ev, window, cx| {
+                                    let n = remove_name.clone();
+                                    this.selected = None;
+                                    this.run_action(window, cx, move |svc| {
+                                        svc.remove_plugin(&n).map(|removed| {
+                                            if removed {
+                                                format!("Removed {n}")
+                                            } else {
+                                                format!("{n} was not present")
+                                            }
+                                        })
+                                    });
+                                }),
+                            )),
+                    )
+            })
             .child(div().text_xs().child("INSTALLED"))
             .children(installed_rows)
             .child(div().text_xs().child("AVAILABLE"))
