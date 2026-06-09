@@ -5,6 +5,7 @@ use gpui::{Context, IntoElement, ParentElement, Styled, Window, div};
 use gpui_component::Disableable;
 use gpui_component::button::Button;
 use gpui_component::input::Input;
+use gpui_component::scroll::ScrollableElement;
 
 use crate::model::{ScopeChoice, VersionRow};
 use crate::ui::RootView;
@@ -84,21 +85,30 @@ impl RootView {
                             ),
                     )
             })
-            .child(div().text_xs().child("INSTALLED"))
-            .children(installed_rows)
-            .child(div().text_xs().child("AVAILABLE"))
             .child(
                 div()
+                    .id("detail-scroll")
+                    .flex_1()
                     .flex()
-                    .gap_1()
-                    .child(div().flex_1().child(Input::new(&self.search_input)))
+                    .flex_col()
+                    .gap_2()
+                    .overflow_y_scrollbar()
+                    .child(div().text_xs().child("INSTALLED"))
+                    .children(installed_rows)
+                    .child(div().text_xs().child("AVAILABLE"))
                     .child(
-                        Button::new("search")
-                            .label("Search")
-                            .on_click(cx.listener(|this, _ev, _window, cx| this.run_search(cx))),
-                    ),
+                        div()
+                            .flex()
+                            .gap_1()
+                            .child(div().flex_1().child(Input::new(&self.search_input)))
+                            .child(
+                                Button::new("search").label("Search").on_click(
+                                    cx.listener(|this, _ev, _window, cx| this.run_search(cx)),
+                                ),
+                            ),
+                    )
+                    .children(available_rows),
             )
-            .children(available_rows)
     }
 
     fn render_installed_row(
