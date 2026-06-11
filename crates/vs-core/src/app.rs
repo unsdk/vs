@@ -627,25 +627,81 @@ impl App {
         let mut delta = EnvDelta::default();
 
         for tool in &current_tools {
-            let runtime_dir = self.effective_runtime_dir(tool);
-            if let Some(runtime) = self.load_installed_runtime(&tool.plugin, &tool.version)? {
-                // Relocate the runtime so that env-keys point through the
-                // scope-specific symlink (e.g. .vs/sdks/nodejs) instead of the
-                // raw cache directory.
-                let runtime = runtime.relocate(&runtime_dir);
-                if let Ok(entry) = self.resolve_registry_entry(&tool.plugin) {
-                    let plugin = self.load_plugin(&entry)?;
-                    let env_keys = plugin.env_keys(&runtime)?;
-                    apply_env_keys(&mut delta, env_keys);
-                } else {
-                    delta.path_entries.push(bin_dir(runtime.main_path()));
-                }
-            } else {
-                delta.path_entries.push(bin_dir(&runtime_dir));
-            }
+            self.apply_tool_env(tool, &mut delta)?;
         }
 
         Ok(delta)
+    }
+
+    /// Adds the environment for a single resolved tool to `delta`.
+    ///
+    /// If the configured version is not installed, falls back to the globally
+    /// configured default (when it is installed) so the tool stays usable
+    /// instead of pointing PATH at a non-existent directory.
+    fn apply_tool_env(&self, tool: &CurrentTool, delta: &mut EnvDelta) -> Result<(), CoreError> {
+        // Prefer the configured version when it is actually installed.
+        if self.apply_installed_tool_env(tool, delta)? {
+            return Ok(());
+        }
+
+        // The configured version is not installed. Fall back to the global
+        // default so a project pinning an uninstalled version does not lose
+        // access to the tool entirely.
+        if tool.scope != Scope::Global
+            && let Some(global) = self.global_tool(&tool.plugin)?
+            && global.version != tool.version
+            && self.apply_installed_tool_env(&global, delta)?
+        {
+            return Ok(());
+        }
+
+        // No installed runtime found anywhere: keep the previous behaviour and
+        // surface the (missing) path so existing diagnostics still apply.
+        delta
+            .path_entries
+            .push(bin_dir(&self.effective_runtime_dir(tool)));
+        Ok(())
+    }
+
+    /// Applies the environment for `tool` when an installed runtime exists.
+    /// Returns `Ok(true)` when the tool was installed and applied.
+    fn apply_installed_tool_env(
+        &self,
+        tool: &CurrentTool,
+        delta: &mut EnvDelta,
+    ) -> Result<bool, CoreError> {
+        let Some(runtime) = self.load_installed_runtime(&tool.plugin, &tool.version)? else {
+            return Ok(false);
+        };
+
+        // Relocate the runtime so that env-keys point through the
+        // scope-specific symlink (e.g. .vs/sdks/nodejs) instead of the
+        // raw cache directory.
+        let runtime = runtime.relocate(&self.effective_runtime_dir(tool));
+        if let Ok(entry) = self.resolve_registry_entry(&tool.plugin) {
+            let plugin = self.load_plugin(&entry)?;
+            let env_keys = plugin.env_keys(&runtime)?;
+            apply_env_keys(delta, env_keys);
+        } else {
+            delta.path_entries.push(bin_dir(runtime.main_path()));
+        }
+        Ok(true)
+    }
+
+    /// Returns the globally configured tool (from `~/.vs/global/tools.toml`),
+    /// if any, as a `Global`-scoped [`CurrentTool`].
+    fn global_tool(&self, plugin: &str) -> Result<Option<CurrentTool>, CoreError> {
+        let path = global_tools_file(self.home());
+        if !path.exists() {
+            return Ok(None);
+        }
+        let versions = read_tool_versions(&path)?;
+        Ok(versions.tools.get(plugin).map(|version| CurrentTool {
+            plugin: plugin.to_string(),
+            version: version.clone(),
+            scope: Scope::Global,
+            source: path,
+        }))
     }
 
     pub(crate) fn path_with_delta(&self, delta: &EnvDelta) -> Result<String, CoreError> {
@@ -1088,9 +1144,83 @@ fn render_shell_env_lines(
 
 #[cfg(test)]
 mod tests {
-    use vs_shell::{EnvDelta, ShellKind};
+    use std::fs;
+
+    use tempfile::TempDir;
+    use vs_config::HomeLayout;
+    use vs_plugin_api::{InstalledArtifact, InstalledRuntime};
+    use vs_shell::{EnvDelta, ShellKind, bin_dir, install_dir};
 
     use super::{compute_env_state_hash, render_shell_env_lines};
+    use crate::App;
+
+    fn write_tools_file(path: &std::path::Path, plugin: &str, version: &str) {
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).unwrap();
+        }
+        fs::write(path, format!("[tools]\n{plugin} = \"{version}\"\n")).unwrap();
+    }
+
+    fn write_receipt(runtime_root: &std::path::Path, plugin: &str, version: &str) {
+        let dir = install_dir(runtime_root, plugin, version);
+        fs::create_dir_all(&dir).unwrap();
+        let runtime = InstalledRuntime {
+            plugin: plugin.to_string(),
+            version: version.to_string(),
+            root_dir: dir.clone(),
+            main: InstalledArtifact {
+                name: plugin.to_string(),
+                version: version.to_string(),
+                path: dir.clone(),
+                note: None,
+            },
+            additions: Vec::new(),
+        };
+        fs::write(
+            dir.join(".vs-receipt.json"),
+            serde_json::to_string(&runtime).unwrap(),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn build_env_should_fall_back_to_global_when_project_version_is_not_installed() {
+        let temp_dir = TempDir::new().unwrap();
+        let home = temp_dir.path().join("home");
+        let cwd = temp_dir.path().join("project");
+        fs::create_dir_all(&cwd).unwrap();
+
+        let app = App::new(
+            HomeLayout {
+                active_home: home.clone(),
+                migration_candidates: Vec::new(),
+            },
+            cwd.clone(),
+            None,
+        )
+        .unwrap();
+
+        // Project pins a version that is NOT installed; global default IS installed.
+        write_tools_file(&cwd.join(".vs.toml"), "nodejs", "24.12.0");
+        write_tools_file(&home.join("global/tools.toml"), "nodejs", "25.8.2");
+        write_receipt(app.runtime_root(), "nodejs", "25.8.2");
+
+        let delta = app.build_env().unwrap();
+
+        let global_bin = bin_dir(&install_dir(app.runtime_root(), "nodejs", "25.8.2"));
+        let missing_bin = bin_dir(&install_dir(app.runtime_root(), "nodejs", "24.12.0"));
+
+        assert!(
+            delta.path_entries.contains(&global_bin),
+            "expected fallback to global default on PATH, got: {:?}",
+            delta.path_entries
+        );
+        assert!(
+            !delta.path_entries.contains(&missing_bin),
+            "should not put the uninstalled project version on PATH, got: {:?}",
+            delta.path_entries
+        );
+    }
 
     #[test]
     fn env_state_hash_should_change_when_env_changes() {
