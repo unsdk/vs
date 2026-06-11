@@ -1148,7 +1148,7 @@ mod tests {
     use std::fs;
 
     use tempfile::TempDir;
-    use vs_config::HomeLayout;
+    use vs_config::{AppConfig, HomeLayout, RegistryConfig, write_app_config};
     use vs_plugin_api::{InstalledArtifact, InstalledRuntime};
     use vs_shell::{EnvDelta, ShellKind, bin_dir, install_dir};
 
@@ -1199,7 +1199,25 @@ mod tests {
         let temp_dir = TempDir::new()?;
         let home = temp_dir.path().join("home");
         let cwd = temp_dir.path().join("project");
+        fs::create_dir_all(&home)?;
         fs::create_dir_all(&cwd)?;
+
+        // Pin registry to an empty local index so this test only exercises
+        // version fallback logic instead of downloading remote plugin metadata.
+        let empty_registry = temp_dir.path().join("empty-registry.json");
+        fs::write(&empty_registry, "[]")?;
+        write_app_config(
+            &home,
+            &AppConfig {
+                proxy: Default::default(),
+                storage: Default::default(),
+                registry: RegistryConfig {
+                    address: empty_registry.display().to_string(),
+                },
+                legacy_version_file: Default::default(),
+                cache: Default::default(),
+            },
+        )?;
 
         let app = App::new(
             HomeLayout {
