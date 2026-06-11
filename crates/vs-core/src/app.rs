@@ -1144,6 +1144,7 @@ fn render_shell_env_lines(
 
 #[cfg(test)]
 mod tests {
+    use std::error::Error;
     use std::fs;
 
     use tempfile::TempDir;
@@ -1154,16 +1155,25 @@ mod tests {
     use super::{compute_env_state_hash, render_shell_env_lines};
     use crate::App;
 
-    fn write_tools_file(path: &std::path::Path, plugin: &str, version: &str) {
+    fn write_tools_file(
+        path: &std::path::Path,
+        plugin: &str,
+        version: &str,
+    ) -> Result<(), Box<dyn Error>> {
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent).unwrap();
+            fs::create_dir_all(parent)?;
         }
-        fs::write(path, format!("[tools]\n{plugin} = \"{version}\"\n")).unwrap();
+        fs::write(path, format!("[tools]\n{plugin} = \"{version}\"\n"))?;
+        Ok(())
     }
 
-    fn write_receipt(runtime_root: &std::path::Path, plugin: &str, version: &str) {
+    fn write_receipt(
+        runtime_root: &std::path::Path,
+        plugin: &str,
+        version: &str,
+    ) -> Result<(), Box<dyn Error>> {
         let dir = install_dir(runtime_root, plugin, version);
-        fs::create_dir_all(&dir).unwrap();
+        fs::create_dir_all(&dir)?;
         let runtime = InstalledRuntime {
             plugin: plugin.to_string(),
             version: version.to_string(),
@@ -1178,17 +1188,18 @@ mod tests {
         };
         fs::write(
             dir.join(".vs-receipt.json"),
-            serde_json::to_string(&runtime).unwrap(),
-        )
-        .unwrap();
+            serde_json::to_string(&runtime)?,
+        )?;
+        Ok(())
     }
 
     #[test]
-    fn build_env_should_fall_back_to_global_when_project_version_is_not_installed() {
-        let temp_dir = TempDir::new().unwrap();
+    fn build_env_should_fall_back_to_global_when_project_version_is_not_installed()
+    -> Result<(), Box<dyn Error>> {
+        let temp_dir = TempDir::new()?;
         let home = temp_dir.path().join("home");
         let cwd = temp_dir.path().join("project");
-        fs::create_dir_all(&cwd).unwrap();
+        fs::create_dir_all(&cwd)?;
 
         let app = App::new(
             HomeLayout {
@@ -1197,15 +1208,14 @@ mod tests {
             },
             cwd.clone(),
             None,
-        )
-        .unwrap();
+        )?;
 
         // Project pins a version that is NOT installed; global default IS installed.
-        write_tools_file(&cwd.join(".vs.toml"), "nodejs", "24.12.0");
-        write_tools_file(&home.join("global/tools.toml"), "nodejs", "25.8.2");
-        write_receipt(app.runtime_root(), "nodejs", "25.8.2");
+        write_tools_file(&cwd.join(".vs.toml"), "nodejs", "24.12.0")?;
+        write_tools_file(&home.join("global/tools.toml"), "nodejs", "25.8.2")?;
+        write_receipt(app.runtime_root(), "nodejs", "25.8.2")?;
 
-        let delta = app.build_env().unwrap();
+        let delta = app.build_env()?;
 
         let global_bin = bin_dir(&install_dir(app.runtime_root(), "nodejs", "25.8.2"));
         let missing_bin = bin_dir(&install_dir(app.runtime_root(), "nodejs", "24.12.0"));
@@ -1220,6 +1230,7 @@ mod tests {
             "should not put the uninstalled project version on PATH, got: {:?}",
             delta.path_entries
         );
+        Ok(())
     }
 
     #[test]
