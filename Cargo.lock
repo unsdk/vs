@@ -6819,7 +6819,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vs"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "anyhow",
  "tempfile",
@@ -6829,7 +6829,7 @@ dependencies = [
 
 [[package]]
 name = "vs-app"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "anyhow",
  "gpui",
@@ -6841,7 +6841,7 @@ dependencies = [
 
 [[package]]
 name = "vs-cli"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "anyhow",
  "clap",
@@ -6856,7 +6856,7 @@ dependencies = [
 
 [[package]]
 name = "vs-config"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "dirs 6.0.0",
  "serde",
@@ -6868,7 +6868,7 @@ dependencies = [
 
 [[package]]
 name = "vs-core"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "anyhow",
  "flate2",
@@ -6893,7 +6893,7 @@ dependencies = [
 
 [[package]]
 name = "vs-installer"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "flate2",
  "indicatif",
@@ -6914,7 +6914,7 @@ dependencies = [
 
 [[package]]
 name = "vs-plugin-api"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "serde",
  "thiserror 2.0.18",
@@ -6922,7 +6922,7 @@ dependencies = [
 
 [[package]]
 name = "vs-plugin-lua"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "flate2",
  "mlua",
@@ -6939,7 +6939,7 @@ dependencies = [
 
 [[package]]
 name = "vs-plugin-sdk"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "serde",
  "vs-plugin-api",
@@ -6947,7 +6947,7 @@ dependencies = [
 
 [[package]]
 name = "vs-plugin-wasi"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "serde",
  "thiserror 2.0.18",
@@ -6957,7 +6957,7 @@ dependencies = [
 
 [[package]]
 name = "vs-registry"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "serde",
  "serde_json",
@@ -6968,14 +6968,14 @@ dependencies = [
 
 [[package]]
 name = "vs-shell"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "thiserror 2.0.18",
 ]
 
 [[package]]
 name = "vs-test-support"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "tempfile",
 ]
