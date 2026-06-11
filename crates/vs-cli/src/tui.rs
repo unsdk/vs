@@ -48,7 +48,7 @@ pub fn run_search_tui(app: &App, plugin: &str, versions: &[AvailableVersion]) ->
 
     if let Some(index) = selection {
         let selected = &versions[index];
-        let installed = app.install_plugin_version(plugin, Some(&selected.version))?;
+        let installed = app.install_plugin_version(plugin, Some(&selected.version), None)?;
         println!(
             "Install {}@{} success! ",
             installed.plugin, installed.version

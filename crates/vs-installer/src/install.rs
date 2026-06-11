@@ -83,7 +83,11 @@ impl Installer {
     }
 
     /// Installs a version using a staging directory and atomic rename.
-    pub fn install(&self, plan: &InstallPlan) -> Result<InstalledRuntime, InstallerError> {
+    pub fn install(
+        &self,
+        plan: &InstallPlan,
+        progress: Option<&crate::ProgressFn<'_>>,
+    ) -> Result<InstalledRuntime, InstallerError> {
         let destination = self.install_dir(&plan.plugin, &plan.version);
         if destination.exists() {
             return self
@@ -101,10 +105,15 @@ impl Installer {
         let staged_install = temp_dir.path().join("runtime");
         fs::create_dir_all(&staged_install)?;
 
-        let main = self.materialize_artifact(&plan.main, &staged_install, true)?;
+        let main = self.materialize_artifact(&plan.main, &staged_install, true, progress)?;
         let mut additions = Vec::new();
         for artifact in &plan.additions {
-            additions.push(self.materialize_artifact(artifact, &staged_install, false)?);
+            additions.push(self.materialize_artifact(
+                artifact,
+                &staged_install,
+                false,
+                progress,
+            )?);
         }
         self.validate_staged_install(&staged_install)?;
 
@@ -170,6 +179,7 @@ impl Installer {
         artifact: &InstallArtifact,
         version_root: &Path,
         is_main: bool,
+        progress: Option<&crate::ProgressFn<'_>>,
     ) -> Result<ArtifactPlacement, InstallerError> {
         let relative_path = runtime_dir_name(artifact, is_main);
         let target_path = version_root.join(&relative_path);
@@ -188,7 +198,7 @@ impl Installer {
                 self.install_from_file(path, artifact.checksum.as_ref(), &target_path)?;
             }
             InstallSource::Url { url, headers } => {
-                let bytes = self.download_bytes(url, headers)?;
+                let bytes = self.download_bytes(url, headers, progress)?;
                 let temp_dir = self.home.join("downloads");
                 fs::create_dir_all(&temp_dir)?;
                 let temp_file = Builder::new().prefix("artifact-").tempfile_in(temp_dir)?;
@@ -287,6 +297,7 @@ impl Installer {
         &self,
         url: &str,
         headers: &std::collections::BTreeMap<String, String>,
+        progress: Option<&crate::ProgressFn<'_>>,
     ) -> Result<Vec<u8>, InstallerError> {
         let client = self.http_client()?;
         let mut request = client.get(url);
@@ -298,7 +309,12 @@ impl Installer {
             .and_then(reqwest::blocking::Response::error_for_status)
             .map_err(|error| InstallerError::Download(error.to_string()))?;
         let total_size = response.content_length();
-        let progress_bar = create_download_progress_bar(total_size);
+        // When a progress callback is supplied (GUI), skip the console bar to
+        // avoid stray stderr output; otherwise keep the indicatif bar (CLI).
+        let progress_bar = match progress {
+            Some(_) => None,
+            None => Some(create_download_progress_bar(total_size)),
+        };
         let mut response = response;
         let mut bytes = Vec::new();
         let mut buffer = [0_u8; 8192];
@@ -311,10 +327,17 @@ impl Installer {
                 break;
             }
             bytes.extend_from_slice(&buffer[..read]);
-            progress_bar.inc(read as u64);
+            if let Some(bar) = progress_bar.as_ref() {
+                bar.inc(read as u64);
+            }
+            if let Some(callback) = progress {
+                callback(bytes.len() as u64, total_size);
+            }
         }
 
-        progress_bar.finish_and_clear();
+        if let Some(bar) = progress_bar.as_ref() {
+            bar.finish_and_clear();
+        }
         Ok(bytes)
     }
 }

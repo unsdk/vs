@@ -8,6 +8,7 @@ impl App {
         &self,
         plugin_name: &str,
         version: Option<&str>,
+        progress: Option<&crate::ProgressFn<'_>>,
     ) -> Result<InstalledVersion, CoreError> {
         let entry = self.resolve_registry_entry(plugin_name)?;
         let plugin = self.load_plugin(&entry)?;
@@ -26,7 +27,7 @@ impl App {
             })?;
 
         let plan = plugin.install_plan(&selected_version)?;
-        let runtime = self.installer.install(&plan)?;
+        let runtime = self.installer.install(&plan, progress)?;
 
         // Run PostInstall inside a logical transaction: if it fails, roll back
         // the freshly committed install directory so we never leave a half-
